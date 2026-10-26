@@ -105,6 +105,26 @@ describe('unified validation engine',()=>{
     expect(fixedSlotsForAssignment(project,assignment(project))).toEqual([{day:'L',session:'s1'}])
   })
 
+  it('treats avoid availability as SOFT and unavailable as HARD',()=>{
+    const project=baseProject()
+    project.teacherAvailability=[{teacherId:'t1',day:'L',session:'s2',status:'avoid',detail:'Preferencia'}]
+    const soft=validatePlacement(project,assignment(project),{day:'L',sessionId:'s2',order:1,duration:60},[])
+    expect(soft.allowed).toBe(true)
+
+    project.teacherAvailability=[{teacherId:'t1',day:'L',session:'s2',status:'unavailable',detail:'Bloqueo'}]
+    const hard=validatePlacement(project,assignment(project),{day:'L',sessionId:'s2',order:1,duration:60},[])
+    expect(hard.allowed).toBe(false)
+    expect(hard.violations.map(item=>item.code)).toContain('TEACHER_UNAVAILABLE')
+  })
+
+  it('includes typed position locks as fixed slots',()=>{
+    const project=baseProject()
+    project.scheduleLocks=[{
+      id:'lock-1',assignmentId:'a1',day:'L',sessionId:'s2',teacherId:'t1',mode:'position',createdAt:'2026-10-26T00:00:00.000Z',
+    }]
+    expect(fixedSlotsForAssignment(project,assignment(project))).toContainEqual({day:'L',session:'s2'})
+  })
+
   it('reports incomplete coverage, missed fixed slots and teacher overload in one final validation',()=>{
     const project=baseProject()
     project.teachers[0].weeklyTeachingMinutes=30
