@@ -12,6 +12,10 @@ export function normalizeProjectData(raw:Partial<ViyeuticaProject>):ViyeuticaPro
     center:{...structuredClone(EMPTY_PROJECT.center),...(raw.center??{})},
     academicYear:{...EMPTY_PROJECT.academicYear,...(raw.academicYear??{})},
     groups:Array.isArray(raw.groups)?raw.groups:[],
+    subgroups:Array.isArray(raw.subgroups)?raw.subgroups:[],
+    spaces:Array.isArray(raw.spaces)?raw.spaces:[],
+    spaceAvailability:Array.isArray(raw.spaceAvailability)?raw.spaceAvailability:[],
+    buildingTravelTimes:Array.isArray(raw.buildingTravelTimes)?raw.buildingTravelTimes:[],
     schedule:{
       ...structuredClone(EMPTY_PROJECT.schedule),
       ...(raw.schedule??{}),
