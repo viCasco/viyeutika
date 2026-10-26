@@ -28,6 +28,34 @@ type Occupancy={
   teacher:Set<string>
 }
 
+export interface GenerationOptions {
+  strategy?: 'optimize' | 'minimum_change'
+  referenceRun?: GenerationRun | null
+  moveCost?: number
+}
+
+function referenceMoveCost(
+  assignment:TeachingAssignment,
+  slot:Slot,
+  options:GenerationOptions,
+){
+  if(options.strategy!=='minimum_change'||!options.referenceRun)return 0
+  const referenceSlots=options.referenceRun.entries.filter(entry=>entry.assignmentId===assignment.id)
+  if(!referenceSlots.length)return 0
+  const matches=referenceSlots.some(entry=>entry.day===slot.day&&entry.sessionId===slot.sessionId)
+  return matches?0:(options.moveCost??40)
+}
+
+function countReferenceChanges(reference:GenerationRun|null|undefined,entries:GeneratedScheduleEntry[]){
+  if(!reference)return 0
+  const a=new Set(reference.entries.map(entry=>entry.assignmentId+'|'+entry.day+'|'+entry.sessionId))
+  const b=new Set(entries.map(entry=>entry.assignmentId+'|'+entry.day+'|'+entry.sessionId))
+  let onlyA=0,onlyB=0
+  for(const key of a)if(!b.has(key))onlyA++
+  for(const key of b)if(!a.has(key))onlyB++
+  return Math.max(onlyA,onlyB)
+}
+
 function uid(prefix:string){return prefix+'_'+crypto.randomUUID()}
 
 function hashSeed(value:string){
@@ -122,9 +150,11 @@ function candidateScore(
   slot:Slot,
   entries:GeneratedScheduleEntry[],
   slots:Slot[],
+  options:GenerationOptions,
 ){
   let score=softCost(project,assignment,slot,entries,slots)
   if(teacherAvoidsSlot(project,assignment.teacherId,slot))score+=10
+  score+=referenceMoveCost(assignment,slot,options)
   const sameSubjectDay=entries.filter(entry=>
     entry.groupId===assignment.groupId&&
     entry.subjectId===assignment.subjectId&&
@@ -141,10 +171,11 @@ function trySingleRepair(
   entries:GeneratedScheduleEntry[],
   occupancy:Occupancy,
   random:()=>number,
+  options:GenerationOptions,
 ){
   const targetSlots=shuffle(slots,random)
     .filter(slot=>!unavailable(project,assignment.teacherId,slot))
-    .sort((a,b)=>candidateScore(project,assignment,a,entries,slots)-candidateScore(project,assignment,b,entries,slots))
+    .sort((a,b)=>candidateScore(project,assignment,a,entries,slots,options)-candidateScore(project,assignment,b,entries,slots,options))
 
   for(const target of targetSlots){
     const blockers=entries.filter(entry=>
@@ -175,7 +206,7 @@ function trySingleRepair(
     const alternatives=shuffle(slots,random)
       .filter(slot=>!(slot.day===target.day&&slot.sessionId===target.sessionId))
       .filter(slot=>hardAllows(project,blockerAssignment,slot,entries,occupancy,slots))
-      .sort((a,b)=>candidateScore(project,blockerAssignment,a,entries,slots)-candidateScore(project,blockerAssignment,b,entries,slots))
+      .sort((a,b)=>candidateScore(project,blockerAssignment,a,entries,slots,options)-candidateScore(project,blockerAssignment,b,entries,slots,options))
 
     const alternative=alternatives[0]
     if(alternative){
@@ -197,6 +228,7 @@ function tryBoundedBacktrack(
   entries:GeneratedScheduleEntry[],
   occupancy:Occupancy,
   random:()=>number,
+  options:GenerationOptions,
 ){
   const assignmentById=new Map(project.assignments.map(item=>[item.id,item]))
   const movable=entries
@@ -233,7 +265,7 @@ function tryBoundedBacktrack(
     const assignment=queue[index]
     const candidates=shuffle(slots,random)
       .filter(slot=>hardAllows(project,assignment,slot,entries,occupancy,slots))
-      .sort((a,b)=>candidateScore(project,assignment,a,entries,slots)-candidateScore(project,assignment,b,entries,slots))
+      .sort((a,b)=>candidateScore(project,assignment,a,entries,slots,options)-candidateScore(project,assignment,b,entries,slots,options))
 
     for(const slot of candidates.slice(0,10)){
       explored++
@@ -296,7 +328,7 @@ function evaluateSoft(project:ViyeuticaProject,entries:GeneratedScheduleEntry[],
   return penalty
 }
 
-function generateAttempt(project:ViyeuticaProject,attempt:number){
+function generateAttempt(project:ViyeuticaProject,attempt:number,options:GenerationOptions){
   const teachingBlocks=project.schedule.blocks.filter(b=>b.active&&b.type==='teaching')
   const slots:Slot[]=teachingValidationSlots(project)
 
@@ -343,16 +375,16 @@ function generateAttempt(project:ViyeuticaProject,attempt:number){
 
       candidates=candidates
         .filter(slot=>hardAllows(project,assignment,slot,entries,occupancy,slots))
-        .sort((a,b)=>candidateScore(project,assignment,a,entries,slots)-candidateScore(project,assignment,b,entries,slots))
+        .sort((a,b)=>candidateScore(project,assignment,a,entries,slots,options)-candidateScore(project,assignment,b,entries,slots,options))
 
       const slot=candidates[0]
       if(!slot){
-        const repaired=index>=fixed.length&&trySingleRepair(project,assignment,slots,entries,occupancy,random)
+        const repaired=index>=fixed.length&&trySingleRepair(project,assignment,slots,entries,occupancy,random,options)
         if(repaired){
           notes.push('Se ha recolocado una sesión previa para evitar un bloqueo durante la generación.')
           continue
         }
-        const backtracked=index>=fixed.length&&tryBoundedBacktrack(project,assignment,slots,entries,occupancy,random)
+        const backtracked=index>=fixed.length&&tryBoundedBacktrack(project,assignment,slots,entries,occupancy,random,options)
         if(backtracked){
           notes.push('Se ha reconstruido un bloque de sesiones mediante backtracking para evitar un bloqueo.')
           continue
@@ -436,23 +468,34 @@ function generateAttempt(project:ViyeuticaProject,attempt:number){
   return {entries,requested,hardViolations,softPenalty,status,score,notes,issues}
 }
 
-export function generateSchedule(project:ViyeuticaProject,attempts=40,seedOffset=0):GenerationRun{
+export function generateSchedule(
+  project:ViyeuticaProject,
+  attempts=40,
+  seedOffset=0,
+  options:GenerationOptions={},
+):GenerationRun{
   let best:ReturnType<typeof generateAttempt>|null=null
   for(let attempt=0;attempt<Math.max(1,attempts);attempt++){
-    const result=generateAttempt(project,attempt+(seedOffset*1000))
+    const result=generateAttempt(project,attempt+(seedOffset*1000),options)
     if(!best||result.hardViolations<best.hardViolations||(result.hardViolations===best.hardViolations&&result.score>best.score)){
       best=result
     }
     if(result.hardViolations===0&&result.softPenalty===0){best=result;break}
   }
   const final=best!
+  const changeCount=countReferenceChanges(options.referenceRun,final.entries)
+  const changePenalty=options.strategy==='minimum_change'?changeCount*(options.moveCost??40):0
   const provisional:GenerationRun={
     id:uid('gen'),
     createdAt:new Date().toISOString(),
     status:final.status,
-    score:final.score,
+    score:Math.max(0,final.score-changePenalty),
     hardViolations:final.hardViolations,
     softPenalty:final.softPenalty,
+    generationStrategy:options.strategy??'optimize',
+    referenceRunId:options.referenceRun?.id??null,
+    changeCount,
+    changePenalty,
     placedSessions:final.entries.length,
     requestedSessions:final.requested,
     entries:final.entries,
@@ -471,7 +514,7 @@ export function generateSchedule(project:ViyeuticaProject,attempts=40,seedOffset
     ...provisional,
     status,
     hardViolations,
-    score:Math.max(0,10000-hardViolations*1000-final.softPenalty),
+    score:Math.max(0,10000-hardViolations*1000-final.softPenalty-changePenalty),
     notes:audit.passed
       ? provisional.notes
       : [...provisional.notes,`La validación final detectó ${audit.errors} incumplimiento${audit.errors===1?'':'s'} bloqueante${audit.errors===1?'':'s'}.`],
