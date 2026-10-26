@@ -106,13 +106,20 @@ function fixedSlotsFor(project:ViyeuticaProject,assignment:TeachingAssignment){
   return fixedSlotsForAssignment(project,assignment)
 }
 
-function addEntry(entries:GeneratedScheduleEntry[],occupancy:Occupancy,assignment:TeachingAssignment,slot:Slot){
+function addEntry(project:ViyeuticaProject,entries:GeneratedScheduleEntry[],occupancy:Occupancy,assignment:TeachingAssignment,slot:Slot){
+  const resolvedSpaceId=assignment.spaceId??(
+    assignment.spaceType
+      ? project.spaces?.find(space=>space.active&&space.type===assignment.spaceType)?.id??null
+      : null
+  )
   const entry:GeneratedScheduleEntry={
     id:uid('slot'),
     assignmentId:assignment.id,
     groupId:assignment.groupId,
+    subgroupId:assignment.subgroupId??null,
     subjectId:assignment.subjectId,
     teacherId:assignment.teacherId,
+    spaceId:resolvedSpaceId,
     day:slot.day,
     sessionId:slot.sessionId,
   }
@@ -201,7 +208,7 @@ function trySingleRepair(
       continue
     }
 
-    addEntry(entries,occupancy,assignment,target)
+    addEntry(project,entries,occupancy,assignment,target)
 
     const alternatives=shuffle(slots,random)
       .filter(slot=>!(slot.day===target.day&&slot.sessionId===target.sessionId))
@@ -210,7 +217,7 @@ function trySingleRepair(
 
     const alternative=alternatives[0]
     if(alternative){
-      addEntry(entries,occupancy,blockerAssignment,alternative)
+      addEntry(project,entries,occupancy,blockerAssignment,alternative)
       return true
     }
 
@@ -270,7 +277,7 @@ function tryBoundedBacktrack(
     for(const slot of candidates.slice(0,10)){
       explored++
       const before=entries.length
-      addEntry(entries,occupancy,assignment,slot)
+      addEntry(project,entries,occupancy,assignment,slot)
       if(place(index+1))return true
       entries.splice(before)
       rebuildOccupancy(entries,occupancy)
@@ -411,7 +418,7 @@ function generateAttempt(project:ViyeuticaProject,attempt:number,options:Generat
         })
         continue
       }
-      addEntry(entries,occupancy,assignment,slot)
+      addEntry(project,entries,occupancy,assignment,slot)
     }
   }
 
