@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
   Building2, CalendarRange, FileInput, FileSearch, Gauge, GraduationCap, Layers3, LayoutGrid, Menu, PanelLeftClose,
-  Share2, ShieldCheck, SlidersHorizontal, Sparkles, Table2, Users, X,
+  Share2, ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
 import { PlaceholderPage } from './components/PlaceholderPage'
@@ -20,7 +20,6 @@ import { AssignmentsPage } from './pages/AssignmentsPage'
 import { RulesPage } from './pages/RulesPage'
 import { PrevalidationPage } from './pages/PrevalidationPage'
 import { GenerationPage } from './pages/GenerationPage'
-import { BulkEditPage } from './pages/BulkEditPage'
 import { SubgroupsPage } from './pages/SubgroupsPage'
 import { SpacesPage } from './pages/SpacesPage'
 import { PublicationPage } from './pages/PublicationPage'
@@ -33,7 +32,6 @@ const navigation = [
   { path: '/cursos', label: 'Curso académico', icon: CalendarDays },
   { path: '/normativa', label: 'Normativa', icon: FileSearch },
   { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
-  { path: '/edicion-masiva', label: 'Edición masiva', icon: Table2 },
   { path: '/subgrupos', label: 'Subgrupos y desdobles', icon: Layers3 },
   { path: '/espacios', label: 'Espacios y edificios', icon: Building2 },
   { path: '/publicacion', label: 'Publicación', icon: Share2 },
@@ -53,7 +51,6 @@ const descriptions: Record<string,string> = {
   '/cursos': 'Creación, histórico y estado de los cursos académicos.',
   '/normativa': 'Fuentes normativas, extracción de reglas y revisión antes de aplicar plantillas.',
   '/proyecto-json': 'Importación de plantillas y exportación de horarios, informes y respaldos.',
-  '/edicion-masiva': 'Edición rápida y pegado tabular validado para profesorado, plan y asignaciones.',
   '/subgrupos': 'Desdobles, optativas y simultaneidad compatible dentro de grupos base.',
   '/espacios': 'Aulas, instalaciones, edificios, disponibilidad y desplazamientos.',
   '/publicacion': 'Publicación versionada y preparación de permisos para colaboración.',
@@ -71,7 +68,7 @@ const getRoute = () => {
   const [path]=normalized.split('?')
   if(path==='/configuracion')return '/centro'
   if(path==='/generacion')return '/horarios'
-  if(path==='/exportaciones')return '/proyecto-json'
+  if(path==='/exportaciones'||path==='/edicion-masiva')return '/proyecto-json'
   return path
 }
 
@@ -105,7 +102,6 @@ export default function App() {
     if (route === '/materias') return <StudyPlanPage project={project} navigate={go}/>
     if (route === '/normativa') return <NormativePage project={project}/>
     if (route === '/proyecto-json') return <ProjectImportPage project={project} navigate={go}/>
-    if (route === '/edicion-masiva') return <BulkEditPage project={project} navigate={go}/>
     if (route === '/subgrupos') return <SubgroupsPage project={project} navigate={go}/>
     if (route === '/espacios') return <SpacesPage project={project} navigate={go}/>
     if (route === '/publicacion') return <PublicationPage project={project}/>
