@@ -183,10 +183,8 @@ export interface TeachingAssignment {
   subjectId: string
   teacherId: string
   spaceId?: string | null
-  assignmentType: 'main' | 'support' | 'co_teaching'
-  subgroupId?: string | null
-  spaceId?: string | null
   spaceType?: string | null
+  assignmentType: 'main' | 'support' | 'co_teaching'
   weeklySessions: number | null
   weeklyMinutes: number | null
   fixedSlots?: { day:string; session:string }[]
@@ -226,8 +224,10 @@ export interface GeneratedScheduleEntry {
   id: string
   assignmentId: string
   groupId: string
+  subgroupId?: string | null
   subjectId: string
   teacherId: string
+  spaceId?: string | null
   day: Weekday
   sessionId: string
 }
@@ -1120,7 +1120,7 @@ export type AuditSeverity = 'error' | 'warning' | 'info'
 export interface AuditIssue {
   id: string
   severity: AuditSeverity
-  category: 'Solapes' | 'Disponibilidad' | 'Franjas fijas' | 'Cobertura' | 'Carga semanal' | 'Reglas' | 'Integridad'
+  category: 'Solapes' | 'Disponibilidad' | 'Franjas fijas' | 'Cobertura' | 'Carga semanal' | 'Reglas' | 'Integridad' | 'Espacios' | 'Desplazamientos' | 'Normativa'
   code: string
   message: string
   detail?: string
