@@ -39,7 +39,7 @@ export function CoursesPage({
 
   const switchToProject=(next:ViyeuticaProject)=>{
     storeCourseProject(project,'archived')
-    saveProject(next)
+    saveProject(next,{intent:'replace_project'})
     activateCourseRecord(next.academicYear.id)
     setRecords(syncCurrentCourse(next))
     window.setTimeout(()=>navigate('/'),180)
@@ -76,6 +76,13 @@ export function CoursesPage({
       },
       generationRuns:[],
       selectedGenerationRunId:null,
+      generationNeedsRevalidation:false,
+      draftScheduleRun:null,
+      draftScheduleSavedAt:null,
+      draftScheduleNeedsRevalidation:false,
+      establishedScheduleRun:null,
+      establishedScheduleSavedAt:null,
+      establishedScheduleNeedsRevalidation:false,
       updatedAt:null,
     }
     setShowDuplicate(false)
