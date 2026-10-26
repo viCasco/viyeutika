@@ -125,6 +125,12 @@ export interface StudyPlanEntry {
 export interface NormativeSource {
   id: string
   name: string
+  autonomousCommunity?: string
+  academicYear?: string
+  disposition?: string
+  article?: string
+  reviewedAt?: string | null
+  validityStatus?: 'unverified' | 'reviewed' | 'possibly_replaced'
   mimeType: string
   size: number
   pageCount: number
@@ -192,6 +198,8 @@ export interface CenterRule {
   id: string
   scope: string
   ruleType: 'HARD' | 'SOFT'
+  originKind?: 'normative' | 'center' | 'preference'
+  reviewStatus?: 'pending' | 'approved' | 'rejected'
   code: string
   description: string
   parameters: Record<string, unknown>
@@ -268,6 +276,10 @@ export type NormativeRelevance = 'timetable' | 'reference'
 export interface NormativeRule {
   id: string
   sourceId: string
+  ruleClass?: 'mandatory' | 'center' | 'preference'
+  reviewStatus?: 'pending' | 'approved' | 'rejected'
+  reviewedAt?: string | null
+  article?: string | null
   section: NormativeSection
   kind: NormativeRuleKind
   label: string
