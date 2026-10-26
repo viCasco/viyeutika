@@ -99,12 +99,15 @@ export function teacherIsUnavailable(
 
 export function fixedSlotsForAssignment(project:ViyeuticaProject,assignment:TeachingAssignment){
   const explicit=assignment.fixedSlots??[]
+  const fromLocks=(project.scheduleLocks??[])
+    .filter(lock=>lock.assignmentId===assignment.id&&(lock.mode==='position'||lock.mode==='full'))
+    .map(lock=>({day:lock.day,session:lock.sessionId}))
   const fromRules=project.rules
     .filter(rule=>rule.active&&rule.ruleType==='HARD')
     .map(rule=>fixedSlotFromRule(rule,assignment))
     .filter(Boolean) as {day:string;session:string}[]
   const unique=new Map<string,{day:string;session:string}>()
-  for(const item of [...explicit,...fromRules])unique.set(item.day+'|'+item.session,item)
+  for(const item of [...explicit,...fromLocks,...fromRules])unique.set(item.day+'|'+item.session,item)
   return [...unique.values()]
 }
 
