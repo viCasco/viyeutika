@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, Info, Plus, RefreshCcw, Sparkles,
-  Trash2, Trophy, XCircle,
+  Pencil, Trash2, Trophy, Undo2, XCircle,
 } from 'lucide-react'
 import {
   emptyGroupTeachingSlots,
@@ -26,6 +26,7 @@ import {
 } from '../store/generationUndoStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { AppModal } from '../components/AppModal'
+import { assignmentLabel, prepareScheduleEntryChange } from '../domain/scheduleEditing'
 
 type GenerationAlternativeAction =
   | {kind:'review_plan';groupId:string}
@@ -67,6 +68,12 @@ export function GenerationPage({
   const [appliedAlternative,setAppliedAlternative]=useState('')
   const [undoSnapshot,setUndoSnapshot]=useState<GenerationUndoSnapshot|null>(()=>loadGenerationUndo())
   const [simulatingAlternativeId,setSimulatingAlternativeId]=useState('')
+  const [editEntryId,setEditEntryId]=useState('')
+  const [editAssignmentId,setEditAssignmentId]=useState('')
+  const [editDay,setEditDay]=useState<Weekday>('L')
+  const [editSessionId,setEditSessionId]=useState('')
+  const [editError,setEditError]=useState('')
+  const [dragEntryId,setDragEntryId]=useState('')
   const [alternativeSimulation,setAlternativeSimulation]=useState<Record<string,{
     valid:boolean
     emptySlots:number
@@ -100,6 +107,93 @@ export function GenerationPage({
     isGenerationProposalValid(project,run)&&auditGeneration(project,run).passed
   const selectedIsDraft=Boolean(selectedRun&&draftRun?.id===selectedRun.id)
   const selectedIsEstablished=Boolean(selectedRun&&establishedRun?.id===selectedRun.id)
+  const editEntry=selectedRun?.entries.find(entry=>entry.id===editEntryId)??null
+
+  const openScheduleEditor=(entryId:string,target?:{day:Weekday;sessionId:string})=>{
+    if(!selectedRun)return
+    const entry=selectedRun.entries.find(item=>item.id===entryId)
+    if(!entry)return
+    setEditEntryId(entry.id)
+    setEditAssignmentId(entry.assignmentId)
+    setEditDay(target?.day??entry.day)
+    setEditSessionId(target?.sessionId??entry.sessionId)
+    setEditError('')
+  }
+
+  const persistEditedRun=(edited:GenerationRun)=>{
+    if(!selectedRun)return
+    const snapshot=saveGenerationUndo(project,'Edición manual del horario')
+    setUndoSnapshot(snapshot)
+
+    if(selectedIsEstablished){
+      const draft={...edited,id:'draft_'+crypto.randomUUID(),createdAt:new Date().toISOString()}
+      saveProject({
+        ...project,
+        selectedGenerationRunId:draft.id,
+        draftScheduleRun:draft,
+        draftScheduleSavedAt:new Date().toISOString(),
+        draftScheduleNeedsRevalidation:false,
+      },{intent:'draft'})
+      setSelectedRunId(draft.id)
+      setGenerationNotice('El horario establecido no se ha sobrescrito. El cambio manual se ha guardado como borrador revalidado.')
+    }else if(selectedIsDraft){
+      saveProject({
+        ...project,
+        selectedGenerationRunId:edited.id,
+        draftScheduleRun:edited,
+        draftScheduleSavedAt:new Date().toISOString(),
+        draftScheduleNeedsRevalidation:false,
+      },{intent:'draft'})
+      setSelectedRunId(edited.id)
+      setGenerationNotice('Borrador actualizado y revalidado correctamente.')
+    }else{
+      const nextRuns=project.generationRuns.map(run=>run.id===edited.id?edited:run)
+      saveProject({
+        ...project,
+        generationRuns:nextRuns,
+        selectedGenerationRunId:edited.id,
+        generationNeedsRevalidation:false,
+      },{intent:'generation'})
+      setSelectedRunId(edited.id)
+      setGenerationNotice('Propuesta actualizada manualmente y revalidada correctamente.')
+    }
+  }
+
+  const confirmScheduleEdit=()=>{
+    if(!selectedRun||!editEntryId)return
+    const result=prepareScheduleEntryChange(project,selectedRun,{
+      entryId:editEntryId,
+      assignmentId:editAssignmentId,
+      day:editDay,
+      sessionId:editSessionId,
+    })
+    if(!result.ok){
+      setEditError(result.message)
+      return
+    }
+    persistEditedRun(result.run)
+    setEditEntryId('')
+    setEditError('')
+  }
+
+  const dropScheduleEntry=(entryId:string,day:Weekday,sessionId:string)=>{
+    if(!selectedRun||!entryId)return
+    const current=selectedRun.entries.find(entry=>entry.id===entryId)
+    if(!current)return
+    const result=prepareScheduleEntryChange(project,selectedRun,{
+      entryId,
+      assignmentId:current.assignmentId,
+      day,
+      sessionId,
+    })
+    if(!result.ok){
+      setGenerationNotice(result.message)
+      return
+    }
+    persistEditedRun(result.run)
+    setDragEntryId('')
+  }
+
   const revalidateStoredSchedules=()=>{
     const invalidRuns=runs.filter(run=>!proposalIsValid(run))
     const draftValid=!draftRun||proposalIsValid(draftRun)
@@ -544,11 +638,19 @@ export function GenerationPage({
             <span>Marcado = colocación distinta respecto a Propuesta 1</span>
           </div>}
 
+          <div className="manual-edit-toolbar">
+            <span><Pencil size={16}/> Edición segura activa: pulsa una sesión o arrástrala a otra franja.</span>
+            {undoSnapshot&&<button className="btn ghost-inline" onClick={undoLastGenerationChange}><Undo2 size={15}/> Deshacer último cambio</button>}
+          </div>
           <SchedulePreview
             project={project}
             run={selectedRun}
             baselineRun={baselineRun}
             groupIds={visibleGroupIds}
+            onEdit={openScheduleEditor}
+            onDropEntry={dropScheduleEntry}
+            dragEntryId={dragEntryId}
+            onDragEntry={setDragEntryId}
           />
         </section>}
       </>}
@@ -635,6 +737,30 @@ export function GenerationPage({
         : 'La propuesta seleccionada se guardará como horario establecido del curso y permanecerá disponible aunque después compares o generes otras propuestas.'}</p>
     </AppModal>}
 
+    {editEntry&&selectedRun&&<AppModal
+      title="Editar sesión"
+      icon={<Pencil size={20}/>}
+      onClose={()=>{setEditEntryId('');setEditError('')}}
+      footer={<>
+        <button className="btn secondary-light" onClick={()=>{setEditEntryId('');setEditError('')}}>Cancelar</button>
+        <button className="btn primary" onClick={confirmScheduleEdit}>Validar y aplicar</button>
+      </>}
+    >
+      <div className="schedule-edit-form">
+        <label><span>Asignación</span><select value={editAssignmentId} onChange={event=>setEditAssignmentId(event.target.value)}>
+          {project.assignments.filter(item=>item.active).map(item=><option key={item.id} value={item.id}>{assignmentLabel(project,item)}</option>)}
+        </select></label>
+        <label><span>Día</span><select value={editDay} onChange={event=>setEditDay(event.target.value as Weekday)}>
+          {project.schedule.activeDays.map(day=><option key={day} value={day}>{dayLabels[day]}</option>)}
+        </select></label>
+        <label><span>Sesión</span><select value={editSessionId} onChange={event=>setEditSessionId(event.target.value)}>
+          {teachingBlocks.map(block=><option key={block.id} value={block.id}>{block.label} · {block.start}–{block.end}</option>)}
+        </select></label>
+        <div className="schedule-edit-safety"><CheckCircle2 size={17}/><span>El cambio solo se guardará si supera disponibilidad, solapes, carga, reglas HARD y auditoría completa.</span></div>
+        {editError&&<div className="notice danger"><AlertTriangle size={17}/><span>{editError}</span></div>}
+      </div>
+    </AppModal>}
+
     {showIssuesModal&&selectedRun&&<GenerationIssuesModal
       project={project}
       run={selectedRun}
@@ -669,12 +795,16 @@ function RunCard({
 }
 
 function SchedulePreview({
-  project,run,baselineRun,groupIds,
+  project,run,baselineRun,groupIds,onEdit,onDropEntry,dragEntryId,onDragEntry,
 }:{
   project:ViyeuticaProject
   run:GenerationRun
   baselineRun:GenerationRun|null
   groupIds:string[]
+  onEdit:(entryId:string,target?:{day:Weekday;sessionId:string})=>void
+  onDropEntry:(entryId:string,day:Weekday,sessionId:string)=>void
+  dragEntryId:string
+  onDragEntry:(entryId:string)=>void
 }) {
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
   return <div className="generation-multi-schedule">
@@ -697,12 +827,30 @@ function SchedulePreview({
                 const changed=baselineRun&&run.id!==baselineRun.id
                   ? cellDiffersFromBaseline(run,baselineRun,groupId,day,block.id)
                   : false
-                if(!primary)return <td key={day} className={'empty-slot '+(changed?'proposal-diff-cell':'')}>—</td>
+                const dropProps={
+                  onDragOver:(event:React.DragEvent<HTMLTableCellElement>)=>event.preventDefault(),
+                  onDrop:(event:React.DragEvent<HTMLTableCellElement>)=>{
+                    event.preventDefault()
+                    if(dragEntryId)onDropEntry(dragEntryId,day,block.id)
+                  },
+                }
+                if(!primary)return <td key={day} {...dropProps} className={'empty-slot schedule-drop-target '+(changed?'proposal-diff-cell':'')}>—</td>
                 const subject=project.subjects.find(item=>item.id===primary.subjectId)
                 const teachers=cell.map(entry=>project.teachers.find(item=>item.id===entry.teacherId)?.name).filter(Boolean)
-                return <td key={day} className={changed?'proposal-diff-cell':''}>
-                  <strong>{subject?.name??'Materia'}</strong>
-                  <small>{teachers.join(' + ')}</small>
+                return <td key={day} {...dropProps} className={(changed?'proposal-diff-cell ':'')+'schedule-edit-cell'}>
+                  <button
+                    type="button"
+                    className="schedule-entry-edit"
+                    draggable
+                    onDragStart={()=>onDragEntry(primary.id)}
+                    onDragEnd={()=>onDragEntry('')}
+                    onClick={()=>onEdit(primary.id)}
+                    title="Editar o mover sesión"
+                  >
+                    <strong>{subject?.name??'Materia'}</strong>
+                    <small>{teachers.join(' + ')}</small>
+                    <Pencil size={12}/>
+                  </button>
                   {changed&&baselineRun&&<span className="proposal-diff-tooltip">{baselineCellLabel(project,baselineRun,groupId,day,block.id)}</span>}
                 </td>
               })}
