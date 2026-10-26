@@ -58,6 +58,13 @@ function normalizeProject(raw:Partial<ViyeuticaProject>):ViyeuticaProject {
     rules:Array.isArray(raw.rules)?raw.rules:[],
     generationRuns:Array.isArray(raw.generationRuns)?raw.generationRuns:[],
     selectedGenerationRunId:raw.selectedGenerationRunId??null,
+    generationNeedsRevalidation:Boolean(raw.generationNeedsRevalidation),
+    draftScheduleRun:raw.draftScheduleRun??null,
+    draftScheduleSavedAt:raw.draftScheduleSavedAt??null,
+    draftScheduleNeedsRevalidation:Boolean(raw.draftScheduleNeedsRevalidation),
+    establishedScheduleRun:raw.establishedScheduleRun??null,
+    establishedScheduleSavedAt:raw.establishedScheduleSavedAt??null,
+    establishedScheduleNeedsRevalidation:Boolean(raw.establishedScheduleNeedsRevalidation),
     normativeSources:Array.isArray(raw.normativeSources)?raw.normativeSources:[],
     normativeRules:Array.isArray(raw.normativeRules)?raw.normativeRules:[],
     updatedAt:null,
@@ -72,6 +79,13 @@ function nextAcademicYear(project:ViyeuticaProject):ViyeuticaProject {
     academicYear:{id:start+'-'+end,label:start+'/'+end,startYear:start,endYear:end},
     generationRuns:[],
     selectedGenerationRunId:null,
+    generationNeedsRevalidation:false,
+    draftScheduleRun:null,
+    draftScheduleSavedAt:null,
+    draftScheduleNeedsRevalidation:false,
+    establishedScheduleRun:null,
+    establishedScheduleSavedAt:null,
+    establishedScheduleNeedsRevalidation:false,
     updatedAt:null,
   }
 }
@@ -153,7 +167,7 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
   const confirmApply=()=>{
     if(!candidate||!pendingMode)return
     const next=pendingMode==='next'?nextAcademicYear(candidate):candidate
-    saveProject(next,{preserveGeneration:pendingMode==='same'})
+    saveProject(next,{intent:'replace_project'})
     setDone(pendingMode==='next'?'Importado como curso '+next.academicYear.label+'.':'Plantilla importada correctamente.')
     setPendingMode(null)
     window.setTimeout(()=>navigate('/'),250)
