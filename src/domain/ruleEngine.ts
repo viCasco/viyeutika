@@ -295,6 +295,54 @@ export function softRuleFinalCost(
     return cost
   }
 
+  if((kind==='minimize_gaps'||rule.code==='REDUCIR_HUECOS_DOCENTES')&&orderBySession){
+    const grouped=new Map<string,number[]>()
+    for(const entry of entries){
+      if(!entryMatchesRuleFilters(rule,entry))continue
+      const order=orderBySession.get(entry.sessionId)
+      if(order===undefined)continue
+      const key=entry.teacherId+'|'+entry.day
+      grouped.set(key,[...(grouped.get(key)??[]),order])
+    }
+    let gaps=0
+    for(const orders of grouped.values()){
+      const sorted=[...new Set(orders)].sort((a,b)=>a-b)
+      if(sorted.length>1)gaps+=Math.max(0,sorted[sorted.length-1]-sorted[0]+1-sorted.length)
+    }
+    return gaps*weight*6
+  }
+
+  if(kind==='teaching_days'){
+    const grouped=new Map<string,Set<string>>()
+    for(const entry of entries){
+      if(!entryMatchesRuleFilters(rule,entry))continue
+      const set=grouped.get(entry.teacherId)??new Set<string>()
+      set.add(entry.day)
+      grouped.set(entry.teacherId,set)
+    }
+    let cost=0
+    for(const days of grouped.values())cost+=compareFinalCount(days.size,value,cmp,weight,5)
+    return cost
+  }
+
+  if(kind==='daily_span'&&orderBySession){
+    const grouped=new Map<string,number[]>()
+    for(const entry of entries){
+      if(!entryMatchesRuleFilters(rule,entry))continue
+      const order=orderBySession.get(entry.sessionId)
+      if(order===undefined)continue
+      const key=entry.teacherId+'|'+entry.day
+      grouped.set(key,[...(grouped.get(key)??[]),order])
+    }
+    let cost=0
+    for(const orders of grouped.values()){
+      const sorted=[...new Set(orders)].sort((a,b)=>a-b)
+      const span=sorted.length?sorted[sorted.length-1]-sorted[0]+1:0
+      cost+=compareFinalCount(span,value,cmp,weight,3)
+    }
+    return cost
+  }
+
   if(kind==='consecutive_limit'&&orderBySession){
     const grouped=new Map<string,number[]>()
     for(const entry of entries){
@@ -338,6 +386,9 @@ const STRUCTURED_EVALUABLE_KINDS=new Set([
   'consecutive_limit',
   'fixed_slot',
   'weekly_load',
+  'minimize_gaps',
+  'teaching_days',
+  'daily_span',
 ])
 
 export function isRuleAutomaticallyEvaluable(rule:CenterRule){
