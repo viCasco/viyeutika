@@ -47,6 +47,39 @@ export interface SchoolGroup {
   active: boolean
 }
 
+export interface SchoolSubgroup {
+  id:string
+  parentGroupId:string
+  name:string
+  students:number|null
+  participantKey:string
+  active:boolean
+}
+
+export interface SchoolSpace {
+  id:string
+  name:string
+  type:string
+  building:string
+  capacity:number|null
+  shared:boolean
+  active:boolean
+}
+
+export interface SpaceAvailability {
+  spaceId:string
+  day:Weekday
+  sessionId:string
+  status:'available'|'unavailable'
+  detail:string
+}
+
+export interface BuildingTravelTime {
+  fromBuilding:string
+  toBuilding:string
+  minutes:number
+}
+
 export interface TimeBlock {
   id: string
   label: string
@@ -140,9 +173,14 @@ export interface TeacherAvailability {
 export interface TeachingAssignment {
   id: string
   groupId: string
+  subgroupId?: string | null
   subjectId: string
   teacherId: string
+  spaceId?: string | null
   assignmentType: 'main' | 'support' | 'co_teaching'
+  subgroupId?: string | null
+  spaceId?: string | null
+  spaceType?: string | null
   weeklySessions: number | null
   weeklyMinutes: number | null
   fixedSlots?: { day:string; session:string }[]
@@ -251,6 +289,10 @@ export interface ViyeuticaProject {
   center: CenterData
   academicYear: AcademicYear
   groups: SchoolGroup[]
+  subgroups: SchoolSubgroup[]
+  spaces: SchoolSpace[]
+  spaceAvailability: SpaceAvailability[]
+  buildingTravelTimes: BuildingTravelTime[]
   schedule: ScheduleConfig
   subjects: Subject[]
   studyPlan: StudyPlanEntry[]
@@ -309,6 +351,10 @@ export const EMPTY_PROJECT: ViyeuticaProject = {
   center: EMPTY_CENTER,
   academicYear: DEFAULT_ACADEMIC_YEAR,
   groups: [],
+  subgroups: [],
+  spaces: [],
+  spaceAvailability: [],
+  buildingTravelTimes: [],
   schedule: EMPTY_SCHEDULE,
   subjects: [],
   studyPlan: [],
@@ -478,6 +524,13 @@ export function validateAssignments(project: ViyeuticaProject) {
   for (const assignment of activeAssignments) {
     if (!activeTeachers.has(assignment.teacherId)) errors.push('Existe una asignación vinculada a un docente inactivo o inexistente.')
     if (!activeGroups.has(assignment.groupId)) errors.push('Existe una asignación vinculada a un grupo inactivo o inexistente.')
+    if (assignment.subgroupId) {
+      const subgroup=project.subgroups?.find(item=>item.id===assignment.subgroupId&&item.active)
+      if(!subgroup||subgroup.parentGroupId!==assignment.groupId) errors.push('Existe una asignación vinculada a un subgrupo inexistente, inactivo o de otro grupo base.')
+    }
+    if (assignment.spaceId&&!project.spaces?.some(space=>space.id===assignment.spaceId&&space.active)) {
+      errors.push('Existe una asignación vinculada a un espacio inexistente o inactivo.')
+    }
     if (!activeSubjects.has(assignment.subjectId)) errors.push('Existe una asignación vinculada a una materia inactiva o inexistente.')
     if ((assignment.weeklySessions ?? 0) <= 0 && (assignment.weeklyMinutes ?? 0) <= 0) {
       errors.push('Todas las asignaciones activas deben indicar sesiones o minutos semanales.')
