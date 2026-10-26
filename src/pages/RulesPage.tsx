@@ -556,6 +556,8 @@ export function RulesPage({
       id:editingId??uid(),
       scope:draft.scope,
       ruleType:draft.ruleType,
+      originKind:previous?.originKind??(draft.ruleType==='SOFT'?'preference':'center'),
+      reviewStatus:previous?.reviewStatus??'approved',
       code,
       description,
       parameters,
