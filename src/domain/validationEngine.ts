@@ -43,6 +43,10 @@ export type PlacementViolationCode =
   | 'TEACHER_BUSY'
   | 'TEACHER_UNAVAILABLE'
   | 'TEACHER_LOAD'
+  | 'SPACE_BUSY'
+  | 'SPACE_UNAVAILABLE'
+  | 'SPACE_CAPACITY'
+  | 'TRAVEL_TIME'
   | 'HARD_RULE'
 
 export interface PlacementViolation {
@@ -139,6 +143,68 @@ export function teacherAssignedMinutes(
     .reduce((total,entry)=>total+(durationBySession.get(entry.sessionId)??0),0)
 }
 
+function subgroupConflict(
+  project:ViyeuticaProject,
+  existing:GeneratedScheduleEntry,
+  assignment:TeachingAssignment,
+){
+  if(existing.groupId!==assignment.groupId)return false
+  const existingAssignment=project.assignments.find(item=>item.id===existing.assignmentId)
+  const existingSubgroup=existing.subgroupId??existingAssignment?.subgroupId??null
+  const candidateSubgroup=assignment.subgroupId??null
+  if(existingSubgroup&&candidateSubgroup&&existingSubgroup!==candidateSubgroup){
+    const a=project.subgroups?.find(item=>item.id===existingSubgroup)
+    const b=project.subgroups?.find(item=>item.id===candidateSubgroup)
+    if(a&&b&&a.parentGroupId===assignment.groupId&&b.parentGroupId===assignment.groupId&&a.participantKey!==b.participantKey)return false
+  }
+  return true
+}
+
+function assignmentSpace(project:ViyeuticaProject,assignment:TeachingAssignment){
+  if(assignment.spaceId)return project.spaces?.find(space=>space.id===assignment.spaceId&&space.active)??null
+  if(assignment.spaceType)return project.spaces?.find(space=>space.active&&space.type===assignment.spaceType)??null
+  return null
+}
+
+function entrySpace(project:ViyeuticaProject,entry:GeneratedScheduleEntry){
+  if(entry.spaceId)return project.spaces?.find(space=>space.id===entry.spaceId&&space.active)??null
+  const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
+  return assignment?assignmentSpace(project,assignment):null
+}
+
+function travelMinutes(project:ViyeuticaProject,from:string,to:string){
+  if(!from||!to||from===to)return 0
+  return project.buildingTravelTimes?.find(item=>
+    (item.fromBuilding===from&&item.toBuilding===to)||
+    (item.fromBuilding===to&&item.toBuilding===from)
+  )?.minutes??0
+}
+
+function violatesTravel(
+  project:ViyeuticaProject,
+  assignment:TeachingAssignment,
+  slot:ValidationSlot,
+  entries:GeneratedScheduleEntry[],
+){
+  const target=assignmentSpace(project,assignment)
+  if(!target?.building)return false
+  const targetBlock=project.schedule.blocks.find(block=>block.id===slot.sessionId)
+  if(!targetBlock)return false
+  const targetStart=minutesFromTime(targetBlock.start)
+  const targetEnd=minutesFromTime(targetBlock.end)
+  for(const entry of entries.filter(item=>item.teacherId===assignment.teacherId&&item.day===slot.day)){
+    const other=entrySpace(project,entry)
+    if(!other?.building||other.building===target.building)continue
+    const block=project.schedule.blocks.find(item=>item.id===entry.sessionId)
+    if(!block)continue
+    const otherStart=minutesFromTime(block.start)
+    const otherEnd=minutesFromTime(block.end)
+    const gap=otherEnd<=targetStart?targetStart-otherEnd:targetEnd<=otherStart?otherStart-targetEnd:-1
+    if(gap>=0&&gap<travelMinutes(project,other.building,target.building))return true
+  }
+  return false
+}
+
 export function validatePlacement(
   project:ViyeuticaProject,
   assignment:TeachingAssignment,
@@ -149,7 +215,7 @@ export function validatePlacement(
   const violations:PlacementViolation[]=[]
   const sameSlot=(entry:GeneratedScheduleEntry)=>entry.day===slot.day&&entry.sessionId===slot.sessionId
 
-  if(!options.allowGroupOverlap&&entries.some(entry=>sameSlot(entry)&&entry.groupId===assignment.groupId)){
+  if(!options.allowGroupOverlap&&entries.some(entry=>sameSlot(entry)&&subgroupConflict(project,entry,assignment))){
     violations.push({code:'GROUP_BUSY'})
   }
   if(entries.some(entry=>sameSlot(entry)&&entry.teacherId===assignment.teacherId)){
@@ -158,6 +224,22 @@ export function validatePlacement(
   if(teacherIsUnavailable(project,assignment.teacherId,slot)){
     violations.push({code:'TEACHER_UNAVAILABLE'})
   }
+
+  const space=assignmentSpace(project,assignment)
+  if(space){
+    const unavailable=project.spaceAvailability?.some(item=>
+      item.spaceId===space.id&&item.day===slot.day&&item.sessionId===slot.sessionId&&item.status==='unavailable'
+    )
+    if(unavailable)violations.push({code:'SPACE_UNAVAILABLE'})
+    if(!space.shared&&entries.some(entry=>sameSlot(entry)&&entrySpace(project,entry)?.id===space.id)){
+      violations.push({code:'SPACE_BUSY'})
+    }
+    const subgroup=assignment.subgroupId?project.subgroups?.find(item=>item.id===assignment.subgroupId):null
+    const group=project.groups.find(item=>item.id===assignment.groupId)
+    const people=subgroup?.students??group?.students??null
+    if(space.capacity!==null&&people!==null&&people>space.capacity)violations.push({code:'SPACE_CAPACITY'})
+  }
+  if(violatesTravel(project,assignment,slot,entries))violations.push({code:'TRAVEL_TIME'})
 
   const teacher=project.teachers.find(item=>item.id===assignment.teacherId&&item.active)
   const maximum=teacher?effectiveTeacherTeachingMinutesLocal(teacher):null
@@ -226,6 +308,12 @@ export function validateRunCore(project:ViyeuticaProject,run:GenerationRun):Audi
     if(!project.groups.some(group=>group.id===entry.groupId&&group.active)){
       push({severity:'error',category:'Integridad',code:'GRUPO_NO_VALIDO',message:'Hay una sesión vinculada a un grupo inexistente o inactivo.',groupId:entry.groupId})
     }
+    if(entry.subgroupId&&!project.subgroups?.some(subgroup=>subgroup.id===entry.subgroupId&&subgroup.active&&subgroup.parentGroupId===entry.groupId)){
+      push({severity:'error',category:'Integridad',code:'SUBGRUPO_NO_VALIDO',message:'Hay una sesión vinculada a un subgrupo inexistente, inactivo o de otro grupo.',groupId:entry.groupId})
+    }
+    if(entry.spaceId&&!project.spaces?.some(space=>space.id===entry.spaceId&&space.active)){
+      push({severity:'error',category:'Espacios',code:'ESPACIO_NO_VALIDO',message:'Hay una sesión vinculada a un espacio inexistente o inactivo.',groupId:entry.groupId})
+    }
     if(!project.subjects.some(subject=>subject.id===entry.subjectId&&subject.active)){
       push({severity:'error',category:'Integridad',code:'MATERIA_NO_VALIDA',message:'Hay una sesión vinculada a una materia inexistente o inactiva.',subjectId:entry.subjectId})
     }
@@ -246,10 +334,16 @@ export function validateRunCore(project:ViyeuticaProject,run:GenerationRun):Audi
     teacherSlots.set(tk,[...(teacherSlots.get(tk)??[]),entry])
   }
   for(const entries of groupSlots.values()){
-    const mainCount=entries.filter(entry=>project.assignments.find(a=>a.id===entry.assignmentId)?.assignmentType==='main').length
-    if(mainCount>1){
+    const main=entries.filter(entry=>project.assignments.find(a=>a.id===entry.assignmentId)?.assignmentType==='main')
+    let conflict=false
+    for(let i=0;i<main.length&&!conflict;i++){
+      const assignment=project.assignments.find(item=>item.id===main[i].assignmentId)
+      if(!assignment)continue
+      conflict=main.slice(i+1).some(other=>subgroupConflict(project,other,assignment))
+    }
+    if(conflict){
       const first=entries[0]
-      push({severity:'error',category:'Solapes',code:'SOLAPE_GRUPO',message:'Un grupo tiene más de una docencia principal en la misma franja.',groupId:first.groupId,day:first.day,sessionId:first.sessionId})
+      push({severity:'error',category:'Solapes',code:'SOLAPE_GRUPO',message:'Un grupo o participantes compatibles tienen más de una docencia principal en la misma franja.',groupId:first.groupId,day:first.day,sessionId:first.sessionId})
     }
   }
   for(const entries of teacherSlots.values()){
@@ -263,6 +357,43 @@ export function validateRunCore(project:ViyeuticaProject,run:GenerationRun):Audi
     if(teacherIsUnavailable(project,entry.teacherId,{day:entry.day,sessionId:entry.sessionId})){
       const blocked=project.teacherAvailability.find(item=>item.teacherId===entry.teacherId&&item.day===entry.day&&item.session===entry.sessionId&&(item.status==='unavailable'||item.status==='travel'))
       push({severity:'error',category:'Disponibilidad',code:'DOCENTE_NO_DISPONIBLE',message:'Se ha colocado una sesión cuando el docente figura como no disponible o en desplazamiento.',detail:blocked?.detail||undefined,teacherId:entry.teacherId,groupId:entry.groupId,subjectId:entry.subjectId,day:entry.day,sessionId:entry.sessionId})
+    }
+  }
+
+  const bySpaceSlot=new Map<string,GeneratedScheduleEntry[]>()
+  for(const entry of run.entries){
+    const space=entrySpace(project,entry)
+    if(!space)continue
+    const key=space.id+'|'+entry.day+'|'+entry.sessionId
+    bySpaceSlot.set(key,[...(bySpaceSlot.get(key)??[]),entry])
+    if(project.spaceAvailability?.some(item=>item.spaceId===space.id&&item.day===entry.day&&item.sessionId===entry.sessionId&&item.status==='unavailable')){
+      push({severity:'error',category:'Espacios',code:'ESPACIO_NO_DISPONIBLE',message:'Se ha usado un espacio marcado como no disponible.',groupId:entry.groupId,day:entry.day,sessionId:entry.sessionId})
+    }
+    const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
+    const subgroup=assignment?.subgroupId?project.subgroups?.find(item=>item.id===assignment.subgroupId):null
+    const group=project.groups.find(item=>item.id===entry.groupId)
+    const people=subgroup?.students??group?.students??null
+    if(space.capacity!==null&&people!==null&&people>space.capacity){
+      push({severity:'error',category:'Espacios',code:'CAPACIDAD_ESPACIO',message:'La capacidad del espacio es inferior al alumnado previsto.',groupId:entry.groupId,day:entry.day,sessionId:entry.sessionId})
+    }
+  }
+  for(const entries of bySpaceSlot.values()){
+    if(entries.length<=1)continue
+    const space=entrySpace(project,entries[0])
+    if(space&&!space.shared){
+      const first=entries[0]
+      push({severity:'error',category:'Espacios',code:'DOBLE_RESERVA_ESPACIO',message:'Un espacio no compartido aparece reservado por más de una actividad en la misma franja.',groupId:first.groupId,day:first.day,sessionId:first.sessionId})
+    }
+  }
+
+  for(const teacher of project.teachers.filter(item=>item.active)){
+    const teacherEntries=run.entries.filter(entry=>entry.teacherId===teacher.id)
+    for(const entry of teacherEntries){
+      const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
+      const slot=teachingValidationSlots(project).find(item=>item.day===entry.day&&item.sessionId===entry.sessionId)
+      if(assignment&&slot&&violatesTravel(project,assignment,slot,teacherEntries.filter(item=>item.id!==entry.id))){
+        push({severity:'error',category:'Desplazamientos',code:'DESPLAZAMIENTO_IMPOSIBLE',message:'El docente no dispone de tiempo suficiente para desplazarse entre edificios.',teacherId:teacher.id,day:entry.day,sessionId:entry.sessionId})
+      }
     }
   }
 
