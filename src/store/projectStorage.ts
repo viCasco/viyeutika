@@ -53,7 +53,7 @@ export function loadProject(): ViyeuticaProject {
       teacherAvailability: Array.isArray(parsed.teacherAvailability)
         ? parsed.teacherAvailability.map(item=>({
             ...item,
-            status:item.status==='assigned'?'available':item.status,
+            status:String((item as {status?:string}).status)==='assigned'?'available':item.status,
           })) as ViyeuticaProject['teacherAvailability']
         : [],
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
