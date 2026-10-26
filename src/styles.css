@@ -2168,3 +2168,53 @@ button.btn:disabled:hover{
 
 @media(max-width:1000px){.rule-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.normative-source-trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.space-tools-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.rule-library-grid{grid-template-columns:1fr}.schedule-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-navigation-card{align-items:flex-start;flex-direction:column}.normative-source-trace-grid{grid-template-columns:1fr}.collaboration-role-buttons{flex-direction:column}.publication-actions{align-items:stretch;flex-direction:column}.publication-actions input{min-width:0;width:100%}}
+
+/* === Importar | Exportar workspace === */
+.import-export-workspace-tabs{
+  display:flex;
+  gap:7px;
+  flex-wrap:wrap;
+  margin:0 0 16px;
+  padding:7px;
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--surface);
+}
+.import-export-workspace-tabs button{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:transparent;
+  color:var(--muted);
+  padding:9px 12px;
+  font-size:8.7px;
+  font-weight:850;
+  cursor:pointer;
+}
+.import-export-workspace-tabs button.active{
+  background:#edf4fb;
+  color:var(--navy2);
+  border-color:#b9cee2;
+}
+.combined-workspace-section{
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:var(--surface);
+  overflow:hidden;
+}
+.combined-workspace-section .bulk-edit-page.embedded{
+  padding:0 14px 14px;
+}
+.combined-workspace-section .bulk-mode-tabs{
+  margin-top:2px;
+}
+[data-theme="dark"] .import-export-workspace-tabs button.active{
+  background:#17283a;
+  border-color:#36526e;
+}
+@media(max-width:700px){
+  .import-export-workspace-tabs{display:grid;grid-template-columns:1fr}
+  .import-export-workspace-tabs button{justify-content:center}
+}
