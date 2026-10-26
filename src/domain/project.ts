@@ -164,6 +164,18 @@ export interface CenterRule {
   reviewRequired?: boolean
 }
 
+export type ScheduleLockMode = 'position' | 'teacher' | 'full'
+
+export interface ScheduleLock {
+  id: string
+  assignmentId: string
+  day: Weekday
+  sessionId: string
+  teacherId: string
+  mode: ScheduleLockMode
+  createdAt: string
+}
+
 export interface GeneratedScheduleEntry {
   id: string
   assignmentId: string
@@ -242,6 +254,7 @@ export interface ViyeuticaProject {
   teacherAvailability: TeacherAvailability[]
   assignments: TeachingAssignment[]
   rules: CenterRule[]
+  scheduleLocks: ScheduleLock[]
   generationRuns: GenerationRun[]
   selectedGenerationRunId?: string | null
   generationNeedsRevalidation?: boolean
@@ -299,6 +312,7 @@ export const EMPTY_PROJECT: ViyeuticaProject = {
   teacherAvailability: [],
   assignments: [],
   rules: [],
+  scheduleLocks: [],
   generationRuns: [],
   selectedGenerationRunId: null,
   generationNeedsRevalidation: false,
@@ -681,6 +695,29 @@ export function runPrevalidation(project: ViyeuticaProject): PrevalidationIssue[
       'Se conservará como obligatoria y deberá revisarse manualmente hasta que exista soporte explícito en el motor.',
       rule.id,
     )
+  }
+
+  for(const lock of project.scheduleLocks??[]){
+    const assignment=project.assignments.find(item=>item.id===lock.assignmentId&&item.active)
+    const validDay=project.schedule.activeDays.includes(lock.day)
+    const validSession=project.schedule.blocks.some(block=>block.id===lock.sessionId&&block.active&&block.type==='teaching')
+    if(!assignment){
+      push('error','Horarios','BLOQUEO_ASIGNACION_INVALIDA','Hay un bloqueo vinculado a una asignación inexistente o inactiva.','Elimina el bloqueo o corrige la asignación.',lock.id)
+      continue
+    }
+    if(!validDay||!validSession){
+      push('error','Horarios','BLOQUEO_FRANJA_INVALIDA','Hay un bloqueo situado fuera de la jornada lectiva activa.','Revisa día y sesión del bloqueo.',lock.id)
+    }
+    if((lock.mode==='teacher'||lock.mode==='full')&&assignment.teacherId!==lock.teacherId){
+      push('error','Horarios','BLOQUEO_DOCENTE_INCOMPATIBLE','Un bloqueo de docente ya no coincide con el docente de la asignación.','Actualiza el bloqueo o la asignación antes de generar.',lock.id)
+    }
+    if(project.teacherAvailability.some(item=>
+      item.teacherId===assignment.teacherId&&item.day===lock.day&&item.session===lock.sessionId&&
+      (item.status==='unavailable'||item.status==='travel')&&
+      (lock.mode==='position'||lock.mode==='full')
+    )){
+      push('error','Horarios','BLOQUEO_INDISPONIBLE','Una sesión bloqueada en posición coincide con una indisponibilidad HARD del docente.','Mueve o elimina el bloqueo, o corrige la disponibilidad.',lock.id)
+    }
   }
 
   const activeTeachers = project.teachers.filter(t=>t.active)
