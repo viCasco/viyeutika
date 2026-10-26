@@ -212,8 +212,10 @@ export function AssignmentsPage({
         setEditingId(assignment.id)
         setDraft({
           groupId:assignment.groupId,
+          subgroupId:assignment.subgroupId??'',
           subjectId:assignment.subjectId,
           teacherId:assignment.teacherId,
+          spaceId:assignment.spaceId??'',
           assignmentType:assignment.assignmentType,
           weeklySessions:assignment.weeklySessions===null?'':String(assignment.weeklySessions),
           weeklyMinutes:assignment.weeklyMinutes===null?'':String(assignment.weeklyMinutes),
