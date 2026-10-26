@@ -4,6 +4,7 @@ import type {
   ViyeuticaProject,
 } from './project'
 import {
+  fixedSlotFromRule,
   isRuleAutomaticallyEvaluable,
   ruleComparison,
   ruleConditionKind,
