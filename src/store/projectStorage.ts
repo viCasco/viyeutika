@@ -50,7 +50,12 @@ export function loadProject(): ViyeuticaProject {
       teachers: Array.isArray(parsed.teachers)
         ? parsed.teachers.map(teacher=>({...teacher,dedications:Array.isArray(teacher.dedications)?teacher.dedications:[]}))
         : [],
-      teacherAvailability: Array.isArray(parsed.teacherAvailability) ? parsed.teacherAvailability : [],
+      teacherAvailability: Array.isArray(parsed.teacherAvailability)
+        ? parsed.teacherAvailability.map(item=>({
+            ...item,
+            status:item.status==='assigned'?'available':item.status,
+          })) as ViyeuticaProject['teacherAvailability']
+        : [],
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
       scheduleLocks: Array.isArray(parsed.scheduleLocks) ? parsed.scheduleLocks : [],
