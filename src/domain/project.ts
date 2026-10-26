@@ -960,15 +960,14 @@ export function runPrevalidation(project: ViyeuticaProject): PrevalidationIssue[
     }
   }
 
-  const fixedAvailability = project.teacherAvailability.filter(item=>item.status==='assigned')
-  const seenFixed=new Set<string>()
-  for (const item of fixedAvailability) {
-    const key=`${item.teacherId}|${item.day}|${item.session}`
-    if (seenFixed.has(key)) {
-      push('warning','Asignaciones','FRANJA_FIJA_DUPLICADA','Existe una franja fijada duplicada para el mismo docente.')
+  const seenLocks=new Set<string>()
+  for(const lock of project.scheduleLocks??[]){
+    const key=lock.assignmentId+'|'+lock.day+'|'+lock.sessionId+'|'+lock.mode
+    if(seenLocks.has(key)){
+      push('warning','Horarios','BLOQUEO_DUPLICADO','Existe un bloqueo de sesión duplicado para la misma asignación y franja.',undefined,lock.id)
       break
     }
-    seenFixed.add(key)
+    seenLocks.add(key)
   }
 
   if (!project.normativeSources.length) {
