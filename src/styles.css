@@ -238,6 +238,18 @@ button.wizard-step.available:hover{transform:translateY(-1px);border-color:#9db9
 button.wizard-step.done{cursor:pointer;background:#f6fbf2;border-color:#b7daa0}
 button.wizard-step.done:hover{transform:translateY(-1px);border-color:#a7d38b}
 button.wizard-step.active{cursor:default}
+button.wizard-step.done.active{
+  background:#edf8e6;
+  border-color:#69a93c;
+  box-shadow:0 0 0 3px rgba(89,180,17,.16),inset 0 0 0 1px rgba(89,180,17,.18);
+}
+button.wizard-step.done.active .wizard-step-icon{
+  background:#3f861d;
+  color:#fff;
+  box-shadow:0 0 0 3px rgba(89,180,17,.14);
+}
+button.wizard-step.done.active strong{color:#285f11}
+button.wizard-step.done.active small{color:#52723f}
 button.wizard-step.active.in-progress{background:#fff8ef;border-color:#efb46d}
 button.wizard-step.active:hover{transform:none}
 button.wizard-step.locked,button.wizard-step:disabled{cursor:not-allowed}
@@ -245,6 +257,17 @@ button.wizard-step:focus-visible{outline:3px solid rgba(89,180,17,.22);outline-o
 [data-theme="dark"] button.wizard-step.available{background:#111c2b;border-color:#294a6f}
 [data-theme="dark"] button.wizard-step.available .wizard-step-icon{background:#172b43;color:#91bde8}
 [data-theme="dark"] button.wizard-step.available:hover{border-color:#436589;box-shadow:0 5px 14px rgba(0,0,0,.22)}
+[data-theme="dark"] button.wizard-step.done.active{
+  background:#182917;
+  border-color:#62a73b;
+  box-shadow:0 0 0 3px rgba(89,180,17,.18),inset 0 0 0 1px rgba(89,180,17,.16);
+}
+[data-theme="dark"] button.wizard-step.done.active .wizard-step-icon{
+  background:#63ad39;
+  color:#0f2109;
+}
+[data-theme="dark"] button.wizard-step.done.active strong{color:#a8dd87}
+[data-theme="dark"] button.wizard-step.done.active small{color:#8fb179}
 
 
 /* === Step 4: Plan de estudios === */
