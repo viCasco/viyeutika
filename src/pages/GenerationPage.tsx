@@ -77,15 +77,27 @@ export function GenerationPage({
   }>>({})
 
   const runs=uniqueGenerationRuns(project.generationRuns)
-  const selectedRun=runs.find(run=>run.id===selectedRunId)??runs[runs.length-1]??latestGeneration(project)
+  const draftRun=project.draftScheduleRun??null
+  const establishedRun=project.establishedScheduleRun??null
+  const retainedRuns=[
+    ...(draftRun&&!runs.some(run=>run.id===draftRun.id)?[{run:draftRun,kind:'draft' as const}]:[]),
+    ...(establishedRun&&!runs.some(run=>run.id===establishedRun.id)&&draftRun?.id!==establishedRun.id
+      ? [{run:establishedRun,kind:'established' as const}]
+      : []),
+  ]
+  const selectedRun=
+    runs.find(run=>run.id===selectedRunId) ??
+    retainedRuns.find(item=>item.run.id===selectedRunId)?.run ??
+    runs[runs.length-1] ??
+    draftRun ??
+    establishedRun ??
+    latestGeneration(project)
   const activeGroups=project.groups.filter(group=>group.active)
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
-  const baselineRun=runs[0]??null
+  const baselineRun=runs[0]??draftRun??establishedRun??null
 
   const proposalIsValid=(run:GenerationRun)=>
     isGenerationProposalValid(project,run)&&auditGeneration(project,run).passed
-  const draftRun=project.draftScheduleRun??null
-  const establishedRun=project.establishedScheduleRun??null
   const selectedIsDraft=Boolean(selectedRun&&draftRun?.id===selectedRun.id)
   const selectedIsEstablished=Boolean(selectedRun&&establishedRun?.id===selectedRun.id)
   const revalidateStoredSchedules=()=>{
@@ -420,18 +432,37 @@ export function GenerationPage({
             </div>
           </div>
           <div className="generation-run-list">
-            {(ascending?[...runs]:[...runs].reverse()).map((run,index)=>{
+            {(ascending?[...runs]:[...runs].reverse()).map((run)=>{
               const originalIndex=runs.findIndex(item=>item.id===run.id)
               const first=runs[0]
               const diff=first&&run.id!==first.id?generationDifference(first,run):null
+              const savedKind=establishedRun?.id===run.id?'established':draftRun?.id===run.id?'draft':null
               return <RunCard
                 key={run.id}
                 run={run}
                 best={isBestRun(run,runs)}
                 selected={run.id===selectedRun?.id}
                 label={`Propuesta ${originalIndex+1}`}
+                artifactKind={savedKind}
                 difference={diff?.differentPlacements??0}
                 baseline={run.id===first?.id}
+                onClick={()=>{
+                  setSelectedRunId(run.id)
+                  saveProject({...project,selectedGenerationRunId:run.id},{intent:'selection'})
+                }}
+              />
+            })}
+            {retainedRuns.map(({run,kind})=>{
+              const diff=baselineRun&&run.id!==baselineRun.id?generationDifference(baselineRun,run):null
+              return <RunCard
+                key={kind+'-'+run.id}
+                run={run}
+                best={false}
+                selected={run.id===selectedRun?.id}
+                label={kind==='draft'?'Borrador guardado':'Horario establecido'}
+                artifactKind={kind}
+                difference={diff?.differentPlacements??0}
+                baseline={run.id===baselineRun?.id}
                 onClick={()=>{
                   setSelectedRunId(run.id)
                   saveProject({...project,selectedGenerationRunId:run.id},{intent:'selection'})
@@ -614,7 +645,7 @@ export function GenerationPage({
 }
 
 function RunCard({
-  run,best,selected,label,difference,baseline,onClick,
+  run,best,selected,label,difference,baseline,artifactKind,onClick,
 }:{
   run:GenerationRun
   best:boolean
@@ -622,15 +653,16 @@ function RunCard({
   label:string
   difference:number
   baseline:boolean
+  artifactKind:'draft'|'established'|null
   onClick:()=>void
 }) {
   const Icon=run.status==='complete'?CheckCircle2:run.status==='partial'?AlertTriangle:XCircle
   return <button className={'generation-run-card '+(selected?'selected ':'')+run.status} onClick={onClick}>
     <Icon size={18}/>
     <span className="generation-run-main">
-      <strong>{label}{best&&<em>Mejor</em>}</strong>
+      <strong>{label}{best&&<em>Mejor</em>}{artifactKind==='draft'&&<em className="draft-inline-badge">Borrador</em>}{artifactKind==='established'&&<em className="established-inline-badge">Establecido</em>}</strong>
       <small>{run.placedSessions}/{run.requestedSessions} sesiones · HARD {run.hardViolations} · SOFT {run.softPenalty}</small>
-      <small className="generation-difference">{baseline?'Referencia para comparar':difference===0?'Sin diferencias frente a Propuesta 1':`${difference} colocaciones distintas frente a Propuesta 1`}</small>
+      <small className="generation-difference">{baseline?'Referencia para comparar':difference===0?'Sin diferencias frente a la referencia':`${difference} colocaciones distintas frente a la referencia`}</small>
     </span>
     <span className="generation-run-score">{run.score}</span>
   </button>
