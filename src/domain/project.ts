@@ -296,25 +296,6 @@ export interface NormativeRule {
   reference?: string | null
 }
 
-export type CollaborationRole='direction'|'head'|'teacher'
-
-export interface PublicationVersion {
-  id:string
-  createdAt:string
-  label:string
-  role:CollaborationRole
-  run:GenerationRun
-}
-
-export interface CollaborationState {
-  localRole:CollaborationRole
-  teacherId:string|null
-  publicationStatus:'draft'|'published'
-  publishedRun:GenerationRun|null
-  publishedAt:string|null
-  versions:PublicationVersion[]
-}
-
 export type TemporaryChangeKind='absence'|'substitution'|'swap'
 
 export interface TemporaryScheduleChange {
@@ -359,7 +340,6 @@ export interface ViyeuticaProject {
   establishedScheduleNeedsRevalidation?: boolean
   normativeSources: NormativeSource[]
   normativeRules: NormativeRule[]
-  collaboration: CollaborationState
   temporaryChanges: TemporaryScheduleChange[]
   updatedAt: string | null
 }
@@ -423,14 +403,6 @@ export const EMPTY_PROJECT: ViyeuticaProject = {
   establishedScheduleNeedsRevalidation: false,
   normativeSources: [],
   normativeRules: [],
-  collaboration:{
-    localRole:'direction',
-    teacherId:null,
-    publicationStatus:'draft',
-    publishedRun:null,
-    publishedAt:null,
-    versions:[],
-  },
   temporaryChanges:[],
   updatedAt: null,
 }
