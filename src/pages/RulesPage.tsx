@@ -14,6 +14,7 @@ import { saveProject } from '../store/projectStorage'
 import { convertNormativeToCenterRule } from '../domain/normativeRuleBridge'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
+import { RULE_LIBRARY, type RuleTemplate } from '../domain/ruleLibrary'
 
 type RuleType=CenterRule['ruleType']
 
@@ -79,6 +80,9 @@ const CONDITION_SCOPES:Record<string,string[]>={
   fixed_slot:['assignment','teacher','group','subject'],
   avoid_slot:['teacher','group','subject','assignment','schedule'],
   weekly_load:['teacher','group','subject'],
+  minimize_gaps:['teacher'],
+  teaching_days:['teacher'],
+  daily_span:['teacher'],
 }
 
 function allowedScopes(kind:string){
@@ -98,6 +102,9 @@ const CONDITION_FIELDS:Record<string,ConditionField[]>={
   fixed_slot:['teacherId','groupId','subjectId','day','sessionId'],
   avoid_slot:['comparison','teacherId','groupId','subjectId','day','sessionId'],
   weekly_load:['comparison','teacherId','groupId','subjectId','value'],
+  minimize_gaps:[],
+  teaching_days:['comparison','value'],
+  daily_span:['comparison','value'],
 }
 
 const CONDITION_COMPARISONS:Record<string,string[]>={
@@ -108,6 +115,9 @@ const CONDITION_COMPARISONS:Record<string,string[]>={
   fixed_slot:['equals'],
   avoid_slot:['avoid','prefer'],
   weekly_load:['maximum','minimum','equals'],
+  minimize_gaps:['minimum'],
+  teaching_days:['maximum','minimum','equals'],
+  daily_span:['maximum','minimum','equals'],
 }
 
 function conditionUses(kind:string,field:ConditionField){
@@ -197,6 +207,9 @@ function conditionKindLabel(kind:string){
     fixed_slot:'Franja fija',
     avoid_slot:'Evitar franja',
     weekly_load:'Carga semanal',
+    minimize_gaps:'Minimizar huecos',
+    teaching_days:'Días de asistencia',
+    daily_span:'Permanencia diaria',
   }
   return labels[kind]??kind
 }
@@ -254,6 +267,9 @@ function generateRuleDescription(draft:Draft,project:ViyeuticaProject){
   if(draft.conditionKind==='daily_limit') return `${targetText}: ${cmp} ${value||'—'} ${sessionCountLabel(value)} al día.`
   if(draft.conditionKind==='consecutive_limit') return `${targetText}: ${cmp} ${value||'—'} ${sessionCountLabel(value)} consecutivas.`
   if(draft.conditionKind==='weekly_load') return `${targetText}: ${cmp} ${value||'—'} ${sessionCountLabel(value)} semanales.`
+  if(draft.conditionKind==='minimize_gaps') return `Minimizar huecos diarios para ${targetText}.`
+  if(draft.conditionKind==='teaching_days') return `${targetText}: ${cmp} ${value||'—'} días de asistencia semanal.`
+  if(draft.conditionKind==='daily_span') return `${targetText}: ${cmp} ${value||'—'} sesiones de permanencia diaria.`
   return `${conditionKindLabel(draft.conditionKind)} · ${targetText}${place?' · '+place:''}${value?' · '+comparisonLabel(draft.comparison)+' '+value:''}.`
 }
 
@@ -298,6 +314,8 @@ function valueGuideMessage(draft:Draft){
     draft.conditionKind==='weekly_load' ? 'sesiones semanales' :
     draft.conditionKind==='daily_limit' ? 'sesiones al día' :
     draft.conditionKind==='consecutive_limit' ? 'sesiones consecutivas' :
+    draft.conditionKind==='teaching_days' ? 'días de asistencia' :
+    draft.conditionKind==='daily_span' ? 'sesiones de permanencia' :
     'unidades'
 
   if(comparison==='maximum'){
@@ -492,6 +510,31 @@ export function RulesPage({
     setRuleModalOpen(true)
   }
 
+  const openTemplate=(template:RuleTemplate)=>{
+    const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
+    const sessionId=template.id==='avoid-first'
+      ? teachingBlocks[0]?.id??''
+      : template.id==='avoid-last'
+        ? teachingBlocks[teachingBlocks.length-1]?.id??''
+        : ''
+    setDraft({
+      ...emptyDraft,
+      scope:template.scope,
+      ruleType:template.ruleType,
+      code:template.code,
+      description:template.description,
+      weight:template.ruleType==='SOFT'?String(template.weight??3):'',
+      conditionKind:template.conditionKind,
+      comparison:template.comparison,
+      value:template.value===undefined?'':String(template.value),
+      sessionId,
+    })
+    setEditingId(null)
+    setDescriptionCustomized(true)
+    setError('')
+    setRuleModalOpen(true)
+  }
+
   const submit=(event:FormEvent)=>{
     event.preventDefault()
     if(!isRuleDraftReady(draft,project)){
@@ -670,7 +713,7 @@ export function RulesPage({
           <section className="rule-condition-builder">
             <div className="rule-condition-builder-heading"><span className="panel-kicker">Condición de la regla</span><h3>Construir condición</h3><p>Selecciona únicamente los campos que necesites. ⩒Yeutika guardará la estructura técnica automáticamente.</p></div>
             <div className="form-grid two">
-              <Field label="Tipo de condición" required><select value={draft.conditionKind} onChange={e=>setDraft(normalizeDraftForCondition(draft,e.target.value))}><option value="">Selecciona el tipo de condición</option><option value="generic">Condición general</option><option value="availability">Disponibilidad / indisponibilidad</option><option value="daily_limit">Límite diario</option><option value="consecutive_limit">Sesiones consecutivas</option><option value="fixed_slot">Franja fija</option><option value="avoid_slot">Evitar franja</option><option value="weekly_load">Carga semanal</option></select></Field>
+              <Field label="Tipo de condición" required><select value={draft.conditionKind} onChange={e=>setDraft(normalizeDraftForCondition(draft,e.target.value))}><option value="">Selecciona el tipo de condición</option><option value="generic">Condición general</option><option value="availability">Disponibilidad / indisponibilidad</option><option value="daily_limit">Límite diario</option><option value="consecutive_limit">Sesiones consecutivas</option><option value="fixed_slot">Franja fija</option><option value="avoid_slot">Evitar franja</option><option value="weekly_load">Carga semanal</option><option value="minimize_gaps">Minimizar huecos</option><option value="teaching_days">Días de asistencia</option><option value="daily_span">Permanencia diaria</option></select></Field>
               <Field label="Ámbito" required><select disabled={!draft.conditionKind} value={draft.scope} onChange={e=>setDraft(normalizeDraftForScope(draft,e.target.value))}><option value="">{draft.conditionKind?'Selecciona el ámbito':'Selecciona primero el tipo de condición'}</option>{scopes.filter(([value])=>allowedScopes(draft.conditionKind).includes(value)).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>
               <RuleTargetFields draft={draft} project={project} onChange={setDraft}/>
               {conditionUses(draft.conditionKind,'comparison')&&<Field label="Comparación"><select disabled={!draft.scope} value={draft.comparison} onChange={e=>setDraft({...draft,comparison:e.target.value})}>{(CONDITION_COMPARISONS[draft.conditionKind]??CONDITION_COMPARISONS.generic).map(value=><option key={value} value={value}>{comparisonLabel(value)}</option>)}</select></Field>}
@@ -686,6 +729,20 @@ export function RulesPage({
     </div>}
 
     {templateMessage&&<div className="template-result"><CheckCircle2 size={16}/><span>{templateMessage}</span></div>}
+
+    <section className="rule-library-card">
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Biblioteca guiada</span><h2>Plantillas de reglas</h2><p>Selecciona una plantilla y completa el mismo formulario usado por “Añadir regla”. No se guarda ninguna regla hasta que sus campos obligatorios sean válidos.</p></div>
+      </div>
+      <div className="rule-library-grid">
+        {RULE_LIBRARY.map(template=><button type="button" key={template.id} className="rule-library-item" onClick={()=>openTemplate(template)}>
+          <span>{template.category}</span>
+          <strong>{template.label}</strong>
+          <small>{template.description}</small>
+          <em className={template.ruleType==='HARD'?'hard':'soft'}>{template.ruleType}</em>
+        </button>)}
+      </div>
+    </section>
 
     <section className="groups-table-card">
       <div className="groups-table-heading">
