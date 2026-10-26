@@ -7,8 +7,9 @@ export function loadProject(): ViyeuticaProject {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return structuredClone(EMPTY_PROJECT)
-    const parsed = JSON.parse(raw) as Partial<ViyeuticaProject>
-    if (parsed.schemaVersion !== 1) return structuredClone(EMPTY_PROJECT)
+    const parsedWithLegacy = JSON.parse(raw) as Partial<ViyeuticaProject> & {collaboration?:unknown}
+    if (parsedWithLegacy.schemaVersion !== 1) return structuredClone(EMPTY_PROJECT)
+    const {collaboration:_legacyCollaboration,...parsed}=parsedWithLegacy
     const generationRuns=Array.isArray(parsed.generationRuns) ? parsed.generationRuns : []
     const draftScheduleRun=
       parsed.draftScheduleRun &&
@@ -93,7 +94,9 @@ export type ProjectSaveIntent =
   | 'replace_project'
 
 function configurationFingerprint(project:ViyeuticaProject){
+  const legacyProject=project as ViyeuticaProject & {collaboration?:unknown}
   const {
+    collaboration:_legacyCollaboration,
     generationRuns:_generationRuns,
     selectedGenerationRunId:_selectedGenerationRunId,
     generationNeedsRevalidation:_generationNeedsRevalidation,
