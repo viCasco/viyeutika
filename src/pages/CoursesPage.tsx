@@ -74,6 +74,7 @@ export function CoursesPage({
         startYear:nextStart,
         endYear:nextEnd,
       },
+      scheduleLocks:[],
       generationRuns:[],
       selectedGenerationRunId:null,
       generationNeedsRevalidation:false,
