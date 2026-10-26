@@ -78,7 +78,7 @@ export function Dashboard({
           <button className="btn secondary" onClick={() => navigate('/horarios')}>Ver módulo de horarios</button>
         </div>
       </div>
-      <div className="hero-mark hero-logo-full"><img src="./brand/viyeutica-logo.svg" alt="Logo de ⩒Yeutika"/></div>
+      <div className="hero-mark hero-logo-full"><img src="./brand/logo_viYeutika.png" alt="Logo de ⩒Yeutika"/></div>
     </section>
 
     <section className="metric-grid metric-grid-five">
