@@ -25,9 +25,11 @@ const modeLabels:Record<BulkEditMode,{title:string;columns:string;example:string
 export function BulkEditPage({
   project,
   navigate,
+  embedded=false,
 }:{
   project:ViyeuticaProject
   navigate:(path:string)=>void
+  embedded?:boolean
 }){
   const [mode,setMode]=useState<BulkEditMode>('teachers')
   const [text,setText]=useState('')
@@ -49,13 +51,13 @@ export function BulkEditPage({
     setDone('')
   }
 
-  return <div className="wizard-page bulk-edit-page">
-    <section className="wizard-intro">
+  return <div className={embedded?'bulk-edit-page embedded':'wizard-page bulk-edit-page'}>
+    {!embedded&&<section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><Table2 size={28}/> Edición masiva</h1>
         <p>Pega rangos tabulados desde Excel o una hoja de cálculo. ⩒Yeutika valida referencias fila a fila y aplica únicamente los registros válidos sin duplicar claves existentes.</p>
       </div>
-    </section>
+    </section>}
 
     <section className="bulk-mode-tabs">
       {(Object.keys(modeLabels) as BulkEditMode[]).map(value=><button type="button" key={value} className={mode===value?'active':''} onClick={()=>changeMode(value)}>{modeLabels[value].title}</button>)}
@@ -92,9 +94,9 @@ export function BulkEditPage({
       </table></div>
     </section>}
 
-    <section className="bulk-navigation-card">
+    {!embedded&&<section className="bulk-navigation-card">
       <button className="btn ghost-inline" onClick={()=>navigate(mode==='teachers'?'/profesorado':mode==='studyPlan'?'/materias':'/asignaciones')}>Volver a {modeLabels[mode].title}</button>
       <p>Las filas válidas actualizan una clave existente o crean una nueva. Las filas con referencias inexistentes nunca se aplican.</p>
-    </section>
+    </section>}
   </div>
 }
