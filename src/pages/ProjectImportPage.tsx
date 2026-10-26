@@ -23,6 +23,7 @@ import { saveProject } from '../store/projectStorage'
 import { normalizeProjectData } from '../domain/projectNormalizer'
 import { AppModal } from '../components/AppModal'
 import { ExportPage } from './ExportPage'
+import { BulkEditPage } from './BulkEditPage'
 import {
   deleteStoredTemplateFile,
   loadStoredTemplateFiles,
@@ -79,6 +80,7 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
   const [showPreview,setShowPreview]=useState(false)
   const [storedFiles,setStoredFiles]=useState<StoredTemplateFile[]>([])
   const [storedPreview,setStoredPreview]=useState<StoredTemplateFile|null>(null)
+  const [workspace,setWorkspace]=useState<'import'|'bulk'|'export'>('import')
 
   useEffect(()=>setStoredFiles(loadStoredTemplateFiles()),[])
 
@@ -158,9 +160,17 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
     <section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><FileInput size={28}/> Importar | Exportar</h1>
-        <p>Importa plantillas del centro en JSON o Excel y exporta horarios, informes y respaldos desde un único módulo. Proyecto actual: <strong>{project.center.name||'sin centro configurado'}</strong>.</p>
+        <p>Importa archivos, pega datos masivamente o exporta horarios, informes y respaldos desde un único módulo. Proyecto actual: <strong>{project.center.name||'sin centro configurado'}</strong>.</p>
       </div>
     </section>
+
+    <section className="import-export-workspace-tabs" aria-label="Importar, pegar datos o exportar">
+      <button type="button" className={workspace==='import'?'active':''} onClick={()=>setWorkspace('import')}><FileInput size={16}/> Importar archivos</button>
+      <button type="button" className={workspace==='bulk'?'active':''} onClick={()=>setWorkspace('bulk')}><FileSpreadsheet size={16}/> Pegado masivo</button>
+      <button type="button" className={workspace==='export'?'active':''} onClick={()=>setWorkspace('export')}><ArrowUpToLine size={16}/> Exportar</button>
+    </section>
+
+    {workspace==='import'&&<>
 
     <section className="import-grid template-import-grid">
       <article className="normative-upload-card">
@@ -291,7 +301,20 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
       {candidateIssues.length>0&&<p style={{marginTop:8}}><strong>Atención:</strong> se han detectado {candidateIssues.length} {candidateIssues.length===1?'incidencia':'incidencias'} que deberán revisarse antes de generar.</p>}
     </AppModal>}
 
-    <ExportPage project={project} navigate={navigate} embedded/>
+    </>}
+
+    {workspace==='bulk'&&<section className="combined-workspace-section">
+      <div className="groups-table-heading">
+        <div>
+          <span className="panel-kicker">Pegado masivo</span>
+          <h2>Editar muchos registros sin importar un proyecto completo</h2>
+          <p>Copia rangos desde Excel o Google Sheets para actualizar Profesorado, Plan de estudios o Asignaciones con validación fila a fila.</p>
+        </div>
+      </div>
+      <BulkEditPage project={project} navigate={navigate} embedded/>
+    </section>}
+
+    {workspace==='export'&&<ExportPage project={project} navigate={navigate} embedded/>}
   </div>
 }
 
