@@ -84,6 +84,14 @@ export function CoursesPage({
       establishedScheduleRun:null,
       establishedScheduleSavedAt:null,
       establishedScheduleNeedsRevalidation:false,
+      collaboration:{
+        ...project.collaboration,
+        publicationStatus:'draft',
+        publishedRun:null,
+        publishedAt:null,
+        versions:[],
+      },
+      temporaryChanges:[],
       updatedAt:null,
     }
     setShowDuplicate(false)
