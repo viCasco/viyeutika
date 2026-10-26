@@ -42,11 +42,6 @@ export function normalizeProjectData(raw:Partial<ViyeuticaProject>):ViyeuticaPro
     establishedScheduleNeedsRevalidation:Boolean(raw.establishedScheduleNeedsRevalidation),
     normativeSources:Array.isArray(raw.normativeSources)?raw.normativeSources:[],
     normativeRules:Array.isArray(raw.normativeRules)?raw.normativeRules:[],
-    collaboration:{
-      ...structuredClone(EMPTY_PROJECT.collaboration),
-      ...(raw.collaboration??{}),
-      versions:Array.isArray(raw.collaboration?.versions)?raw.collaboration!.versions:[],
-    },
     temporaryChanges:Array.isArray(raw.temporaryChanges)?raw.temporaryChanges:[],
     updatedAt:null,
   }
