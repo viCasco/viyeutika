@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Layers3, Plus, Trash2 } from 'lucide-react'
+import { AppModal } from '../components/AppModal'
 import type { SchoolSubgroup, ViyeuticaProject } from '../domain/project'
 import { saveProject } from '../store/projectStorage'
 
@@ -17,6 +18,20 @@ export function SubgroupsPage({
   const [students,setStudents]=useState('')
   const [participantKey,setParticipantKey]=useState('')
   const [error,setError]=useState('')
+  const [modalOpen,setModalOpen]=useState(false)
+
+  const resetForm=()=>{
+    setParentGroupId(project.groups.find(group=>group.active)?.id??'')
+    setName('')
+    setStudents('')
+    setParticipantKey('')
+    setError('')
+  }
+
+  const closeModal=()=>{
+    resetForm()
+    setModalOpen(false)
+  }
 
   const add=()=>{
     const group=project.groups.find(item=>item.id===parentGroupId&&item.active)
@@ -38,7 +53,7 @@ export function SubgroupsPage({
       active:true,
     }
     saveProject({...project,subgroups:[...project.subgroups,subgroup]})
-    setName('');setStudents('');setParticipantKey('');setError('')
+    closeModal()
   }
 
   const remove=(id:string)=>{
@@ -64,20 +79,29 @@ export function SubgroupsPage({
       </div>
     </section>
 
-    <section className="subgroup-create-card">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Nuevo desdoble</span><h2>Crear subgrupo</h2></div></div>
-      <div className="form-grid four">
-        <label className="form-field"><span>Grupo base</span><select value={parentGroupId} onChange={e=>setParentGroupId(e.target.value)}>{project.groups.filter(group=>group.active).map(group=><option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+    {modalOpen&&<AppModal
+      title="Añadir subgrupo"
+      icon={<Layers3 size={20}/>}
+      onClose={closeModal}
+      footer={<>
+        <button type="button" className="btn ghost-inline" onClick={closeModal}>Cancelar</button>
+        <button type="button" className="btn primary" disabled={!parentGroupId||!name.trim()} onClick={add}>Aceptar</button>
+      </>}
+    >
+      <div className="form-grid two">
+        <label className="form-field"><span>Grupo base</span><select value={parentGroupId} onChange={e=>setParentGroupId(e.target.value)}><option value="">Selecciona...</option>{project.groups.filter(group=>group.active).map(group=><option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
         <label className="form-field"><span>Nombre</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Ej. Inglés A"/></label>
         <label className="form-field"><span>Alumnado</span><input type="number" min="0" value={students} onChange={e=>setStudents(e.target.value)} placeholder="Opcional"/></label>
         <label className="form-field"><span>Clave de participantes</span><input value={participantKey} onChange={e=>setParticipantKey(e.target.value)} placeholder="Ej. optativa-inglés-A"/></label>
       </div>
       {error&&<div className="inline-error">{error}</div>}
-      <button className="btn primary" onClick={add}><Plus size={16}/> Añadir subgrupo</button>
-    </section>
+    </AppModal>}
 
     <section className="groups-table-card">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Estructura</span><h2>Subgrupos configurados</h2></div></div>
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Estructura</span><h2>Subgrupos configurados</h2></div>
+        <button className="btn ghost-inline" onClick={()=>setModalOpen(true)}><Plus size={16}/> Añadir subgrupo</button>
+      </div>
       {project.subgroups.length===0
         ? <div className="groups-empty"><Layers3 size={28}/><strong>No hay subgrupos</strong><p>Solo necesitas crearlos cuando exista un desdoble, optativa o agrupación simultánea.</p></div>
         : <div className="groups-table-wrap"><table className="groups-table">

@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Building2, Plus, Trash2 } from 'lucide-react'
+import { Building2, Clock3, Plus, Trash2 } from 'lucide-react'
+import { AppModal } from '../components/AppModal'
 import type { BuildingTravelTime, SchoolSpace, SpaceAvailability, ViyeuticaProject, Weekday } from '../domain/project'
 import { saveProject } from '../store/projectStorage'
 
 const uid=()=> 'space_'+crypto.randomUUID()
 const dayLabels:Record<Weekday,string>={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado'}
+
+type SpaceModal='space'|'availability'|'travel'|null
 
 export function SpacesPage({
   project,
@@ -24,7 +27,10 @@ export function SpacesPage({
   const [availabilitySpaceId,setAvailabilitySpaceId]=useState(project.spaces.find(space=>space.active)?.id??'')
   const [availabilityDay,setAvailabilityDay]=useState<Weekday>(project.schedule.activeDays[0]??'L')
   const [availabilitySession,setAvailabilitySession]=useState(project.schedule.blocks.find(block=>block.active&&block.type==='teaching')?.id??'')
+  const [modal,setModal]=useState<SpaceModal>(null)
   const buildings=[...new Set(project.spaces.map(space=>space.building).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))
+
+  const closeModal=()=>setModal(null)
 
   const addSpace=()=>{
     if(!name.trim()||!type.trim()||!building.trim())return
@@ -35,6 +41,7 @@ export function SpacesPage({
     saveProject({...project,spaces:[...project.spaces,space]})
     setName('');setType('');setBuilding('');setCapacity('');setShared(false)
     if(!availabilitySpaceId)setAvailabilitySpaceId(space.id)
+    closeModal()
   }
 
   const removeSpace=(id:string)=>{
@@ -62,6 +69,7 @@ export function SpacesPage({
       spaceId:availabilitySpaceId,day:availabilityDay,sessionId:availabilitySession,status:'unavailable',detail:'',
     }
     saveProject({...project,spaceAvailability:[...filtered,next]})
+    closeModal()
   }
 
   const removeAvailability=(item:SpaceAvailability)=>{
@@ -78,6 +86,7 @@ export function SpacesPage({
     const next:BuildingTravelTime={fromBuilding:travelFrom,toBuilding:travelTo,minutes}
     saveProject({...project,buildingTravelTimes:[...filtered,next]})
     setTravelMinutes('')
+    closeModal()
   }
 
   return <div className="wizard-page spaces-page">
@@ -88,20 +97,61 @@ export function SpacesPage({
       </div>
     </section>
 
-    <section className="space-create-card">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Recursos</span><h2>Añadir espacio</h2></div></div>
-      <div className="form-grid four">
+    {modal==='space'&&<AppModal
+      title="Añadir espacio"
+      icon={<Building2 size={20}/>}
+      onClose={closeModal}
+      footer={<>
+        <button type="button" className="btn ghost-inline" onClick={closeModal}>Cancelar</button>
+        <button type="button" className="btn primary" disabled={!name.trim()||!type.trim()||!building.trim()} onClick={addSpace}>Aceptar</button>
+      </>}
+    >
+      <div className="form-grid two">
         <label className="form-field"><span>Nombre</span><input value={name} onChange={e=>setName(e.target.value)} placeholder="Gimnasio"/></label>
         <label className="form-field"><span>Tipo</span><input value={type} onChange={e=>setType(e.target.value)} placeholder="Gimnasio, aula, laboratorio..."/></label>
         <label className="form-field"><span>Edificio</span><input value={building} onChange={e=>setBuilding(e.target.value)} placeholder="Principal"/></label>
         <label className="form-field"><span>Capacidad</span><input type="number" min="0" value={capacity} onChange={e=>setCapacity(e.target.value)} placeholder="Opcional"/></label>
       </div>
       <label className="checkbox-field"><input type="checkbox" checked={shared} onChange={e=>setShared(e.target.checked)}/><span><strong>Uso compartido permitido</strong><small>Solo actívalo si varias actividades pueden usar simultáneamente el recurso sin conflicto.</small></span></label>
-      <button className="btn primary" disabled={!name.trim()||!type.trim()||!building.trim()} onClick={addSpace}><Plus size={16}/> Añadir espacio</button>
-    </section>
+    </AppModal>}
+
+    {modal==='availability'&&<AppModal
+      title="Añadir bloqueo de disponibilidad"
+      icon={<Clock3 size={20}/>}
+      onClose={closeModal}
+      footer={<>
+        <button type="button" className="btn ghost-inline" onClick={closeModal}>Cancelar</button>
+        <button type="button" className="btn primary" disabled={!availabilitySpaceId||!availabilitySession} onClick={addAvailability}>Aceptar</button>
+      </>}
+    >
+      <div className="form-grid three">
+        <label className="form-field"><span>Espacio</span><select value={availabilitySpaceId} onChange={e=>setAvailabilitySpaceId(e.target.value)}><option value="">Selecciona...</option>{project.spaces.filter(space=>space.active).map(space=><option key={space.id} value={space.id}>{space.name}</option>)}</select></label>
+        <label className="form-field"><span>Día</span><select value={availabilityDay} onChange={e=>setAvailabilityDay(e.target.value as Weekday)}>{project.schedule.activeDays.map(day=><option key={day} value={day}>{dayLabels[day]}</option>)}</select></label>
+        <label className="form-field"><span>Sesión</span><select value={availabilitySession} onChange={e=>setAvailabilitySession(e.target.value)}><option value="">Selecciona...</option>{project.schedule.blocks.filter(block=>block.active&&block.type==='teaching').map(block=><option key={block.id} value={block.id}>{block.label}</option>)}</select></label>
+      </div>
+    </AppModal>}
+
+    {modal==='travel'&&<AppModal
+      title="Añadir tiempo de desplazamiento"
+      icon={<Building2 size={20}/>}
+      onClose={closeModal}
+      footer={<>
+        <button type="button" className="btn ghost-inline" onClick={closeModal}>Cancelar</button>
+        <button type="button" className="btn primary" disabled={!travelFrom||!travelTo||travelFrom===travelTo||travelMinutes===''||Number(travelMinutes)<0} onClick={addTravel}>Aceptar</button>
+      </>}
+    >
+      <div className="form-grid three">
+        <label className="form-field"><span>Origen</span><select value={travelFrom} onChange={e=>setTravelFrom(e.target.value)}><option value="">Selecciona...</option>{buildings.map(value=><option key={value}>{value}</option>)}</select></label>
+        <label className="form-field"><span>Destino</span><select value={travelTo} onChange={e=>setTravelTo(e.target.value)}><option value="">Selecciona...</option>{buildings.map(value=><option key={value}>{value}</option>)}</select></label>
+        <label className="form-field"><span>Minutos</span><input type="number" min="0" value={travelMinutes} onChange={e=>setTravelMinutes(e.target.value)}/></label>
+      </div>
+    </AppModal>}
 
     <section className="groups-table-card">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Inventario</span><h2>Espacios</h2></div></div>
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Inventario</span><h2>Espacios</h2></div>
+        <button className="btn ghost-inline" onClick={()=>setModal('space')}><Plus size={16}/> Añadir espacio</button>
+      </div>
       {project.spaces.length===0
         ? <div className="groups-empty"><Building2 size={28}/><strong>No hay espacios configurados</strong><p>Añade solo los recursos que necesiten reserva o tengan restricciones de horario.</p></div>
         : <div className="groups-table-wrap"><table className="groups-table">
@@ -123,28 +173,35 @@ export function SpacesPage({
       </table></div>
     </section>
 
-    <section className="space-tools-grid">
-      <article className="space-tool-card">
-        <div><span className="panel-kicker">Disponibilidad</span><h2>Bloquear franja de espacio</h2></div>
-        <div className="form-grid three">
-          <label className="form-field"><span>Espacio</span><select value={availabilitySpaceId} onChange={e=>setAvailabilitySpaceId(e.target.value)}><option value="">Selecciona...</option>{project.spaces.filter(space=>space.active).map(space=><option key={space.id} value={space.id}>{space.name}</option>)}</select></label>
-          <label className="form-field"><span>Día</span><select value={availabilityDay} onChange={e=>setAvailabilityDay(e.target.value as Weekday)}>{project.schedule.activeDays.map(day=><option key={day} value={day}>{dayLabels[day]}</option>)}</select></label>
-          <label className="form-field"><span>Sesión</span><select value={availabilitySession} onChange={e=>setAvailabilitySession(e.target.value)}>{project.schedule.blocks.filter(block=>block.active&&block.type==='teaching').map(block=><option key={block.id} value={block.id}>{block.label}</option>)}</select></label>
-        </div>
-        <button className="btn secondary-light" onClick={addAvailability}>Marcar no disponible</button>
-        <div className="space-chip-list">{project.spaceAvailability.map((item,index)=><span key={index}>{project.spaces.find(space=>space.id===item.spaceId)?.name??'Espacio'} · {dayLabels[item.day]} · {project.schedule.blocks.find(block=>block.id===item.sessionId)?.label??item.sessionId}<button onClick={()=>removeAvailability(item)}>×</button></span>)}</div>
-      </article>
+    <section className="groups-table-card">
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Disponibilidad</span><h2>Franjas no disponibles</h2></div>
+        <button className="btn ghost-inline" disabled={project.spaces.filter(space=>space.active).length===0} onClick={()=>setModal('availability')}><Plus size={16}/> Añadir bloqueo</button>
+      </div>
+      {project.spaceAvailability.length===0
+        ? <div className="groups-empty"><Clock3 size={28}/><strong>Sin bloqueos de espacio</strong><p>Todos los espacios se consideran disponibles salvo las restricciones que añadas.</p></div>
+        : <div className="groups-table-wrap"><table className="groups-table">
+          <thead><tr><th>Espacio</th><th>Día</th><th>Sesión</th><th/></tr></thead>
+          <tbody>{project.spaceAvailability.map((item,index)=><tr key={`${item.spaceId}-${item.day}-${item.sessionId}-${index}`}>
+            <td>{project.spaces.find(space=>space.id===item.spaceId)?.name??'Espacio eliminado'}</td>
+            <td>{dayLabels[item.day]}</td>
+            <td>{project.schedule.blocks.find(block=>block.id===item.sessionId)?.label??item.sessionId}</td>
+            <td><button className="row-delete" onClick={()=>removeAvailability(item)}><Trash2 size={15}/></button></td>
+          </tr>)}</tbody>
+        </table></div>}
+    </section>
 
-      <article className="space-tool-card">
-        <div><span className="panel-kicker">Edificios</span><h2>Tiempo de desplazamiento</h2></div>
-        <div className="form-grid three">
-          <label className="form-field"><span>Origen</span><select value={travelFrom} onChange={e=>setTravelFrom(e.target.value)}><option value="">Selecciona...</option>{buildings.map(value=><option key={value}>{value}</option>)}</select></label>
-          <label className="form-field"><span>Destino</span><select value={travelTo} onChange={e=>setTravelTo(e.target.value)}><option value="">Selecciona...</option>{buildings.map(value=><option key={value}>{value}</option>)}</select></label>
-          <label className="form-field"><span>Minutos</span><input type="number" min="0" value={travelMinutes} onChange={e=>setTravelMinutes(e.target.value)}/></label>
-        </div>
-        <button className="btn secondary-light" onClick={addTravel}>Guardar tiempo</button>
-        <div className="space-chip-list">{project.buildingTravelTimes.map((item,index)=><span key={index}>{item.fromBuilding} ↔ {item.toBuilding} · {item.minutes} min</span>)}</div>
-      </article>
+    <section className="groups-table-card">
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Edificios</span><h2>Tiempos de desplazamiento</h2></div>
+        <button className="btn ghost-inline" disabled={buildings.length<2} onClick={()=>setModal('travel')}><Plus size={16}/> Añadir desplazamiento</button>
+      </div>
+      {project.buildingTravelTimes.length===0
+        ? <div className="groups-empty"><Building2 size={28}/><strong>Sin desplazamientos configurados</strong><p>Añade tiempos cuando el centro tenga actividades en edificios diferentes.</p></div>
+        : <div className="groups-table-wrap"><table className="groups-table">
+          <thead><tr><th>Origen</th><th>Destino</th><th>Tiempo</th></tr></thead>
+          <tbody>{project.buildingTravelTimes.map((item,index)=><tr key={index}><td>{item.fromBuilding}</td><td>{item.toBuilding}</td><td>{item.minutes} min</td></tr>)}</tbody>
+        </table></div>}
     </section>
   </div>
 }

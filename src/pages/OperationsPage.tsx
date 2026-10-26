@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { CalendarRange, RefreshCcw, Trash2, UserRoundX } from 'lucide-react'
+import { CalendarRange, Plus, RefreshCcw, Trash2, UserRoundX } from 'lucide-react'
+import { AppModal } from '../components/AppModal'
 import type { TemporaryChangeKind, TemporaryScheduleChange, ViyeuticaProject } from '../domain/project'
 import { operationalAudit, operationalScheduleForDate } from '../domain/temporaryOperations'
 import { saveProject } from '../store/projectStorage'
@@ -19,8 +20,23 @@ export function OperationsPage({project}:{project:ViyeuticaProject}){
   const [endDate,setEndDate]=useState(today)
   const [notes,setNotes]=useState('')
   const [previewDate,setPreviewDate]=useState(today)
+  const [modalOpen,setModalOpen]=useState(false)
   const run=useMemo(()=>operationalScheduleForDate(project,previewDate),[project,previewDate])
   const audit=useMemo(()=>operationalAudit(project,previewDate),[project,previewDate])
+
+  const resetForm=()=>{
+    setKind('substitution')
+    setTeacherId(project.teachers.find(item=>item.active)?.id??'')
+    setOtherTeacherId('')
+    setStartDate(today)
+    setEndDate(today)
+    setNotes('')
+  }
+
+  const closeModal=()=>{
+    resetForm()
+    setModalOpen(false)
+  }
 
   const add=()=>{
     if(!teacherId||!startDate||!endDate||endDate<startDate)return
@@ -38,7 +54,7 @@ export function OperationsPage({project}:{project:ViyeuticaProject}){
       createdAt:new Date().toISOString(),
     }
     saveProject({...project,temporaryChanges:[...project.temporaryChanges,change]},{intent:'replace_project'})
-    setNotes('')
+    closeModal()
   }
 
   const remove=(id:string)=>{
@@ -62,21 +78,31 @@ export function OperationsPage({project}:{project:ViyeuticaProject}){
 
     {!project.establishedScheduleRun&&<section className="empty-state-card"><UserRoundX size={32}/><h2>Necesitas un horario establecido</h2><p>Guarda primero una propuesta válida como horario del curso para utilizarla como referencia operativa.</p></section>}
 
-    <section className="temporary-change-form">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Cambio temporal</span><h2>Registrar ausencia, sustitución o permuta</h2></div></div>
+    {modalOpen&&<AppModal
+      title="Añadir cambio temporal"
+      icon={<CalendarRange size={20}/>}
+      onClose={closeModal}
+      wide
+      footer={<>
+        <button type="button" className="btn ghost-inline" onClick={closeModal}>Cancelar</button>
+        <button type="button" className="btn primary" disabled={!project.establishedScheduleRun||!teacherId||endDate<startDate||((kind==='substitution'||kind==='swap')&&!otherTeacherId)} onClick={add}>Aceptar</button>
+      </>}
+    >
       <div className="form-grid three">
-        <label className="form-field"><span>Tipo</span><select value={kind} onChange={e=>setKind(e.target.value as TemporaryChangeKind)}>{(Object.keys(kindLabels) as TemporaryChangeKind[]).map(value=><option key={value} value={value}>{kindLabels[value]}</option>)}</select></label>
-        <label className="form-field"><span>{kind==='absence'?'Docente ausente':'Docente de referencia'}</span><select value={teacherId} onChange={e=>setTeacherId(e.target.value)}>{project.teachers.filter(item=>item.active).map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>
+        <label className="form-field"><span>Tipo</span><select value={kind} onChange={e=>{setKind(e.target.value as TemporaryChangeKind);setOtherTeacherId('')}}>{(Object.keys(kindLabels) as TemporaryChangeKind[]).map(value=><option key={value} value={value}>{kindLabels[value]}</option>)}</select></label>
+        <label className="form-field"><span>{kind==='absence'?'Docente ausente':'Docente de referencia'}</span><select value={teacherId} onChange={e=>{setTeacherId(e.target.value);setOtherTeacherId('')}}>{project.teachers.filter(item=>item.active).map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>
         {kind!=='absence'&&<label className="form-field"><span>{kind==='substitution'?'Docente sustituto':'Docente para permuta'}</span><select value={otherTeacherId} onChange={e=>setOtherTeacherId(e.target.value)}><option value="">Selecciona...</option>{project.teachers.filter(item=>item.active&&item.id!==teacherId).map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select></label>}
         <label className="form-field"><span>Desde</span><input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)}/></label>
         <label className="form-field"><span>Hasta</span><input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)}/></label>
         <label className="form-field"><span>Observaciones</span><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Opcional"/></label>
       </div>
-      <button className="btn primary" disabled={!project.establishedScheduleRun||!teacherId||endDate<startDate||((kind==='substitution'||kind==='swap')&&!otherTeacherId)} onClick={add}>Registrar cambio temporal</button>
-    </section>
+    </AppModal>}
 
     <section className="groups-table-card">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Vigencia</span><h2>Cambios registrados</h2></div></div>
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Vigencia</span><h2>Cambios registrados</h2></div>
+        <button className="btn ghost-inline" disabled={!project.establishedScheduleRun} onClick={()=>setModalOpen(true)}><Plus size={16}/> Añadir cambio</button>
+      </div>
       {project.temporaryChanges.length===0
         ? <div className="groups-empty"><CalendarRange size={28}/><strong>No hay cambios temporales</strong><p>El horario operativo coincide con el horario establecido.</p></div>
         : <div className="groups-table-wrap"><table className="groups-table">
