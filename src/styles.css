@@ -2014,3 +2014,25 @@ button.btn:disabled:hover{
   color:#14733a;
   border:1px solid rgba(22,163,74,.22);
 }
+
+/* === Fase 2: edición manual segura === */
+.manual-edit-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0;padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.manual-edit-toolbar>span{display:flex;align-items:center;gap:7px;font-size:9px;font-weight:800;color:var(--muted)}
+.schedule-edit-cell{padding:0!important;vertical-align:stretch}
+.schedule-entry-edit{position:relative;width:100%;min-height:58px;padding:9px 20px 9px 9px;border:0;background:transparent;color:inherit;text-align:left;cursor:grab}
+.schedule-entry-edit:active{cursor:grabbing}
+.schedule-entry-edit strong,.schedule-entry-edit small{display:block}
+.schedule-entry-edit strong{font-size:9.5px}
+.schedule-entry-edit small{margin-top:3px;color:var(--muted);font-size:8px}
+.schedule-entry-edit svg{position:absolute;right:6px;top:7px;color:var(--muted);opacity:.7}
+.schedule-edit-cell:hover,.schedule-drop-target:hover{outline:2px solid color-mix(in srgb,var(--green) 35%,transparent);outline-offset:-2px}
+.schedule-drop-target{transition:.15s}
+.schedule-edit-form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.schedule-edit-form label:first-child{grid-column:1/-1}
+.schedule-edit-form label{display:grid;gap:5px}
+.schedule-edit-form label>span{font-size:8.5px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.schedule-edit-form select{width:100%;min-height:38px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:0 10px}
+.schedule-edit-safety{grid-column:1/-1;display:flex;gap:8px;align-items:flex-start;padding:10px 11px;border:1px solid #bcd9a7;border-radius:10px;background:#f5fbf1;color:#47752d;font-size:9px;line-height:1.45}
+.schedule-edit-form .notice{grid-column:1/-1}
+[data-theme="dark"] .schedule-edit-safety{background:#172319;border-color:#385a2c;color:#9dce7b}
+@media(max-width:700px){.manual-edit-toolbar{align-items:flex-start;flex-direction:column}.schedule-edit-form{grid-template-columns:1fr}.schedule-edit-form label:first-child{grid-column:auto}}
