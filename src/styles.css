@@ -2046,3 +2046,31 @@ button.btn:disabled:hover{
 .schedule-entry-edit:has(.schedule-cell-lock){padding-left:29px}
 [data-theme="dark"] .schedule-cell-lock{background:#332a12;color:#e3c979;border-color:#685726}
 @media(max-width:760px){.schedule-lock-control{grid-template-columns:1fr}.schedule-lock-control .btn{justify-self:start}}
+
+/* === Fase 4: disponibilidad HARD / SOFT === */
+.availability-weekly-grid-card{margin:12px 0 14px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.availability-grid-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.availability-grid-heading strong,.availability-grid-heading small{display:block}
+.availability-grid-heading strong{font-size:10px}
+.availability-grid-heading small{margin-top:3px;color:var(--muted);font-size:8px;line-height:1.45}
+.availability-grid-heading select{min-width:220px;min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 9px}
+.availability-grid-wrap{overflow:auto;border:1px solid var(--border);border-radius:10px}
+.availability-weekly-grid{width:100%;min-width:720px;border-collapse:collapse;table-layout:fixed}
+.availability-weekly-grid th,.availability-weekly-grid td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px;text-align:center}
+.availability-weekly-grid thead th{font-size:8.5px;color:var(--muted);background:#f8fafc}
+.availability-weekly-grid tbody th{width:110px;text-align:left;background:#fafbfc}
+.availability-weekly-grid tbody th strong,.availability-weekly-grid tbody th small{display:block}
+.availability-weekly-grid tbody th strong{font-size:8.5px}
+.availability-weekly-grid tbody th small{font-size:7.5px;color:var(--muted);margin-top:2px}
+.availability-grid-cell{width:100%;min-height:38px;border:1px solid transparent;border-radius:8px;padding:5px 4px;font-size:7.7px;font-weight:850;cursor:pointer;transition:.15s}
+.availability-grid-cell.available{background:#f4f8fb;color:#5a6a78;border-color:#d8e0e8}
+.availability-grid-cell.avoid{background:#fff7df;color:#8c6a13;border-color:#e5ca75}
+.availability-grid-cell.unavailable{background:#fdecec;color:#a42f2f;border-color:#e6a8a8}
+.availability-grid-cell.travel{background:#f2eefe;color:#6846a1;border-color:#c9b7e8}
+.availability-grid-cell:hover{transform:translateY(-1px);box-shadow:0 2px 7px rgba(0,0,0,.08)}
+[data-theme="dark"] .availability-weekly-grid thead th,[data-theme="dark"] .availability-weekly-grid tbody th{background:#151d28}
+[data-theme="dark"] .availability-grid-cell.available{background:#1a2530;color:#aab7c4;border-color:#344454}
+[data-theme="dark"] .availability-grid-cell.avoid{background:#302711;color:#e0c66e;border-color:#625426}
+[data-theme="dark"] .availability-grid-cell.unavailable{background:#321a1a;color:#e7a0a0;border-color:#6d3434}
+[data-theme="dark"] .availability-grid-cell.travel{background:#251d34;color:#c2ace2;border-color:#51406d}
+@media(max-width:760px){.availability-grid-heading{flex-direction:column}.availability-grid-heading select{width:100%;min-width:0}}
