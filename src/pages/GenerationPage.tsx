@@ -412,7 +412,7 @@ export function GenerationPage({
       </div>
     </section>}
 
-    {runs.length===0
+    {runs.length===0&&retainedRuns.length===0
       ? <section className="generation-empty">
           <CalendarDays size={38}/>
           <h2>Todavía no hay propuestas</h2>
@@ -421,7 +421,7 @@ export function GenerationPage({
       : <>
         <section className="generation-history">
           <div className="groups-table-heading">
-            <div><span className="panel-kicker">Comparación</span><h2>Propuestas generadas</h2></div>
+            <div><span className="panel-kicker">Comparación</span><h2>Propuestas y horarios guardados</h2></div>
             <div className="generation-history-actions">
               <button className="btn ghost-inline" title="Invertir orden" onClick={()=>setAscending(value=>!value)}>
                 <ArrowDownUp size={15}/> {ascending?'1 → N':'N → 1'}
