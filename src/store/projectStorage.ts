@@ -10,16 +10,20 @@ export function loadProject(): ViyeuticaProject {
     const parsed = JSON.parse(raw) as Partial<ViyeuticaProject>
     if (parsed.schemaVersion !== 1) return structuredClone(EMPTY_PROJECT)
     const generationRuns=Array.isArray(parsed.generationRuns) ? parsed.generationRuns : []
-    const selectedGenerationRunId=
-      parsed.selectedGenerationRunId &&
-      generationRuns.some(run=>run.id===parsed.selectedGenerationRunId)
-        ? parsed.selectedGenerationRunId
-        : null
     const draftScheduleRun=
       parsed.draftScheduleRun &&
       typeof parsed.draftScheduleRun==='object' &&
       Array.isArray(parsed.draftScheduleRun.entries)
         ? parsed.draftScheduleRun
+        : null
+    const selectedGenerationRunId=
+      parsed.selectedGenerationRunId &&
+      (
+        generationRuns.some(run=>run.id===parsed.selectedGenerationRunId) ||
+        draftScheduleRun?.id===parsed.selectedGenerationRunId ||
+        parsed.establishedScheduleRun?.id===parsed.selectedGenerationRunId
+      )
+        ? parsed.selectedGenerationRunId
         : null
     const draftScheduleSavedAt=
       typeof parsed.draftScheduleSavedAt==='string'
