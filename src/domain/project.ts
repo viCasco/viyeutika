@@ -341,6 +341,8 @@ export interface ViyeuticaProject {
   normativeSources: NormativeSource[]
   normativeRules: NormativeRule[]
   temporaryChanges: TemporaryScheduleChange[]
+  /** Legacy import compatibility only. Not used by the application. */
+  collaboration?: unknown
   updatedAt: string | null
 }
 
