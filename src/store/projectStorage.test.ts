@@ -117,6 +117,18 @@ describe('project persistence policy',()=>{
     expect(reloaded.generationRuns).toHaveLength(1)
   })
 
+  it('keeps a saved draft selected even when it is no longer a generated proposal',()=>{
+    const project=projectWithArtifacts()
+    project.generationRuns=[]
+    project.selectedGenerationRunId=run.id
+    saveProject(project,{intent:'replace_project'})
+
+    const reloaded=loadProject()
+    expect(reloaded.generationRuns).toHaveLength(0)
+    expect(reloaded.draftScheduleRun?.id).toBe(run.id)
+    expect(reloaded.selectedGenerationRunId).toBe(run.id)
+  })
+
   it('clears only proposals when the user explicitly cleans proposals',()=>{
     const project=projectWithArtifacts()
     saveProject(project,{intent:'replace_project'})
