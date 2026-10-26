@@ -105,13 +105,17 @@ export function NormativePage({project}:{project:ViyeuticaProject}) {
   }
 
   const toggleRule=(id:string)=>persist({
-    normativeRules:project.normativeRules.map(rule=>rule.id===id?{...rule,approved:!rule.approved}:rule),
+    normativeRules:project.normativeRules.map(rule=>{
+      if(rule.id!==id)return rule
+      const approved=!rule.approved
+      return {...rule,approved,reviewStatus:approved?'approved':'pending',reviewedAt:approved?new Date().toISOString():null}
+    }),
   })
 
   const approveHighConfidence=()=>persist({
     normativeRules:project.normativeRules.map(rule=>
       (rule.relevance??inferLegacyRelevance(rule))==='timetable'&&rule.confidence>=0.78&&!conflictRuleIds.has(rule.id)
-        ? {...rule,approved:true}
+        ? {...rule,approved:true,reviewStatus:'approved' as const,reviewedAt:new Date().toISOString()}
         : rule
     ),
   })
@@ -121,7 +125,18 @@ export function NormativePage({project}:{project:ViyeuticaProject}) {
   })
 
   const rejectAll=()=>persist({
-    normativeRules:project.normativeRules.map(rule=>({...rule,approved:false})),
+    normativeRules:project.normativeRules.map(rule=>({...rule,approved:false,reviewStatus:'rejected',reviewedAt:new Date().toISOString()})),
+  })
+
+  const updateSourceMeta=(id:string,patch:Partial<ViyeuticaProject['normativeSources'][number]>)=>{
+    saveProject({
+      ...project,
+      normativeSources:project.normativeSources.map(source=>source.id===id?{...source,...patch}:source),
+    },{intent:'replace_project'})
+  }
+
+  const setRuleClass=(id:string,ruleClass:'mandatory'|'center'|'preference')=>persist({
+    normativeRules:project.normativeRules.map(rule=>rule.id===id?{...rule,ruleClass}:rule),
   })
 
   const incorporateRule=(rule:NormativeRule)=>{
@@ -191,6 +206,17 @@ export function NormativePage({project}:{project:ViyeuticaProject}) {
             <strong>{source.name}</strong>
             <span>{source.pageCount} pág. · {formatBytes(source.size)} · {source.extractedChars.toLocaleString('es-ES')} caracteres</span>
             <small>{source.stages.length?source.stages.join(' · '):'Etapa no determinada'} · SHA-256 {source.sha256.slice(0,12)}…</small>
+            <div className="normative-source-trace-grid">
+              <input value={source.autonomousCommunity??''} onChange={e=>updateSourceMeta(source.id,{autonomousCommunity:e.target.value})} placeholder="Comunidad autónoma"/>
+              <input value={source.academicYear??''} onChange={e=>updateSourceMeta(source.id,{academicYear:e.target.value})} placeholder="Curso"/>
+              <input value={source.disposition??''} onChange={e=>updateSourceMeta(source.id,{disposition:e.target.value})} placeholder="Disposición"/>
+              <input value={source.article??''} onChange={e=>updateSourceMeta(source.id,{article:e.target.value})} placeholder="Artículo / referencia"/>
+              <select value={source.validityStatus??'unverified'} onChange={e=>updateSourceMeta(source.id,{validityStatus:e.target.value as 'unverified'|'reviewed'|'possibly_replaced',reviewedAt:e.target.value==='reviewed'?new Date().toISOString():source.reviewedAt??null})}>
+                <option value="unverified">Vigencia no verificada</option>
+                <option value="reviewed">Revisada por el centro</option>
+                <option value="possibly_replaced">Posible disposición sustituida</option>
+              </select>
+            </div>
           </div>
           <div className="normative-source-count"><strong>{sourceApproved}/{sourceRules.length}</strong><small>reglas aprobadas</small></div>
           <div className="normative-source-actions">
@@ -265,6 +291,7 @@ export function NormativePage({project}:{project:ViyeuticaProject}) {
                 conflict={conflictRuleIds.has(rule.id)}
                 linked={isNormativeRuleLinked(project.rules,rule.id)}
                 onIncorporate={()=>incorporateRule(rule)}
+                onClassChange={value=>setRuleClass(rule.id,value)}
               />
             })}
           </div>}
@@ -305,7 +332,7 @@ export function NormativePage({project}:{project:ViyeuticaProject}) {
 }
 
 function RuleCard({
-  rule,sourceName,sourceMimeType,onToggle,onOpen,relevance,onMove,conflict,linked,onIncorporate,
+  rule,sourceName,sourceMimeType,onToggle,onOpen,relevance,onMove,conflict,linked,onIncorporate,onClassChange,
 }:{
   rule:NormativeRule
   sourceName:string
@@ -317,6 +344,7 @@ function RuleCard({
   conflict:boolean
   linked:boolean
   onIncorporate:()=>void
+  onClassChange:(value:'mandatory'|'center'|'preference')=>void
 }) {
   return <article className={'normative-rule '+(rule.approved?'approved':'')}>
     <button className={'normative-approve '+(rule.approved?'approved':'')} onClick={onToggle}>
@@ -331,6 +359,7 @@ function RuleCard({
         {rule.level&&<span>{rule.level}</span>}
         {rule.subject&&<span>{rule.subject}</span>}
         <span>Pág. {rule.page}</span>
+        <span className={'normative-review-status '+(rule.reviewStatus??(rule.approved?'approved':'pending'))}>{rule.reviewStatus==='rejected'?'Rechazada':rule.approved?'Revisada':'Pendiente de revisión'}</span>
       </div>
       <strong>{rule.label}</strong>
       <blockquote>{rule.excerpt}</blockquote>
@@ -338,6 +367,11 @@ function RuleCard({
         <span>{sourceName}</span>
         <span>{rule.value!==null?`${rule.value} ${unitLabel(rule.unit)}`:'Regla textual'}</span>
         <span>Confianza {Math.round(rule.confidence*100)}%</span>
+        <label className="normative-class-select">Naturaleza <select value={rule.ruleClass??'mandatory'} onChange={e=>onClassChange(e.target.value as 'mandatory'|'center'|'preference')}>
+          <option value="mandatory">Norma obligatoria</option>
+          <option value="center">Restricción del centro</option>
+          <option value="preference">Preferencia</option>
+        </select></label>
         {sourceMimeType==='application/pdf'&&<button className="normative-open-page" onClick={onOpen}><Eye size={14}/> Ver pág. {rule.page} en PDF</button>}
         <button className="normative-move-rule" onClick={()=>onMove(relevance==='timetable'?'reference':'timetable')}>
           {relevance==='timetable'?'Mover a referencia':'Usar para horario'}
