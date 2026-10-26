@@ -4,7 +4,6 @@ import {
   FileSpreadsheet, ShieldAlert, Trash2, TriangleAlert,
 } from 'lucide-react'
 import {
-  EMPTY_PROJECT,
   isCenterComplete,
   isStructureComplete,
   validateAssignments,
@@ -21,6 +20,7 @@ import {
   projectFromXlsTemplate,
 } from '../domain/templateIO'
 import { saveProject } from '../store/projectStorage'
+import { normalizeProjectData } from '../domain/projectNormalizer'
 import { AppModal } from '../components/AppModal'
 import { ExportPage } from './ExportPage'
 import {
@@ -35,43 +35,6 @@ type ImportEnvelope = {
   formatVersion?: number
   project?: Partial<ViyeuticaProject>
   reviewRequired?: { path:string; reason:string }[]
-}
-
-function normalizeProject(raw:Partial<ViyeuticaProject>):ViyeuticaProject {
-  return {
-    ...structuredClone(EMPTY_PROJECT),
-    ...raw,
-    center:{...structuredClone(EMPTY_PROJECT.center),...(raw.center??{})},
-    academicYear:{...EMPTY_PROJECT.academicYear,...(raw.academicYear??{})},
-    groups:Array.isArray(raw.groups)?raw.groups:[],
-    schedule:{
-      ...structuredClone(EMPTY_PROJECT.schedule),
-      ...(raw.schedule??{}),
-      activeDays:Array.isArray(raw.schedule?.activeDays)?raw.schedule!.activeDays:[...EMPTY_PROJECT.schedule.activeDays],
-      blocks:Array.isArray(raw.schedule?.blocks)?raw.schedule!.blocks:[],
-    },
-    subjects:Array.isArray(raw.subjects)?raw.subjects:[],
-    studyPlan:Array.isArray(raw.studyPlan)?raw.studyPlan:[],
-    teachers:Array.isArray(raw.teachers)?raw.teachers:[],
-    teacherAvailability:Array.isArray(raw.teacherAvailability)
-      ? raw.teacherAvailability.map(item=>({...item,status:String((item as {status?:string}).status)==='assigned'?'available':item.status})) as ViyeuticaProject['teacherAvailability']
-      : [],
-    assignments:Array.isArray(raw.assignments)?raw.assignments:[],
-    rules:Array.isArray(raw.rules)?raw.rules:[],
-    scheduleLocks:Array.isArray(raw.scheduleLocks)?raw.scheduleLocks:[],
-    generationRuns:Array.isArray(raw.generationRuns)?raw.generationRuns:[],
-    selectedGenerationRunId:raw.selectedGenerationRunId??null,
-    generationNeedsRevalidation:Boolean(raw.generationNeedsRevalidation),
-    draftScheduleRun:raw.draftScheduleRun??null,
-    draftScheduleSavedAt:raw.draftScheduleSavedAt??null,
-    draftScheduleNeedsRevalidation:Boolean(raw.draftScheduleNeedsRevalidation),
-    establishedScheduleRun:raw.establishedScheduleRun??null,
-    establishedScheduleSavedAt:raw.establishedScheduleSavedAt??null,
-    establishedScheduleNeedsRevalidation:Boolean(raw.establishedScheduleNeedsRevalidation),
-    normativeSources:Array.isArray(raw.normativeSources)?raw.normativeSources:[],
-    normativeRules:Array.isArray(raw.normativeRules)?raw.normativeRules:[],
-    updatedAt:null,
-  }
 }
 
 function nextAcademicYear(project:ViyeuticaProject):ViyeuticaProject {
@@ -130,7 +93,7 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
       if(envelope.format && envelope.format!=='viyeutica-school-project') throw new Error('El JSON no tiene un formato ⩒Yeutika reconocido.')
       await storeTemplateFile(file,rawText,'json')
       setStoredFiles(loadStoredTemplateFiles())
-      setCandidate(normalizeProject(envelope.project??{}))
+      setCandidate(normalizeProjectData(envelope.project??{}))
       setCandidateFormat('json')
       setReview(envelope.reviewRequired??[])
       setFilename(file.name)
@@ -150,7 +113,7 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
       const parsed=projectFromXlsTemplate(rawText)
       await storeTemplateFile(file,rawText,'xls')
       setStoredFiles(loadStoredTemplateFiles())
-      setCandidate(normalizeProject(parsed))
+      setCandidate(normalizeProjectData(parsed))
       setCandidateFormat('xls')
       setReview([])
       setFilename(file.name)
