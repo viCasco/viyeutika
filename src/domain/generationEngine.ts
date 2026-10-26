@@ -19,6 +19,7 @@ import {
   validatePlacement,
   type ValidationSlot,
 } from './validationEngine'
+import { auditGeneration } from './auditEngine'
 
 type Slot=ValidationSlot
 type Occupancy={
@@ -443,7 +444,7 @@ export function generateSchedule(project:ViyeuticaProject,attempts=40,seedOffset
     if(result.hardViolations===0&&result.softPenalty===0){best=result;break}
   }
   const final=best!
-  return {
+  const provisional:GenerationRun={
     id:uid('gen'),
     createdAt:new Date().toISOString(),
     status:final.status,
@@ -455,5 +456,22 @@ export function generateSchedule(project:ViyeuticaProject,attempts=40,seedOffset
     entries:final.entries,
     issues:final.issues,
     notes:final.notes,
+  }
+  const audit=auditGeneration(project,provisional)
+  const hardViolations=Math.max(final.hardViolations,audit.errors)
+  const status:'complete'|'partial'|'failed'=
+    audit.passed&&final.entries.length>=final.requested
+      ? 'complete'
+      : final.entries.length
+        ? 'partial'
+        : 'failed'
+  return {
+    ...provisional,
+    status,
+    hardViolations,
+    score:Math.max(0,10000-hardViolations*1000-final.softPenalty),
+    notes:audit.passed
+      ? provisional.notes
+      : [...provisional.notes,`La validación final detectó ${audit.errors} incumplimiento${audit.errors===1?'':'s'} bloqueante${audit.errors===1?'':'s'}.`],
   }
 }
