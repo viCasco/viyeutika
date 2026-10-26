@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
   AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, Info, Plus, RefreshCcw, Sparkles,
-  Pencil, Trash2, Trophy, Undo2, XCircle,
+  Lock, Pencil, Trash2, Trophy, Undo2, Unlock, XCircle,
 } from 'lucide-react'
 import {
   emptyGroupTeachingSlots,
@@ -12,6 +12,7 @@ import {
   latestGeneration,
   uniqueGenerationRuns,
   type GenerationRun,
+  type ScheduleLockMode,
   type ViyeuticaProject,
   type Weekday,
 } from '../domain/project'
@@ -73,6 +74,7 @@ export function GenerationPage({
   const [editDay,setEditDay]=useState<Weekday>('L')
   const [editSessionId,setEditSessionId]=useState('')
   const [editError,setEditError]=useState('')
+  const [editLockMode,setEditLockMode]=useState<ScheduleLockMode|'none'>('none')
   const [dragEntryId,setDragEntryId]=useState('')
   const [alternativeSimulation,setAlternativeSimulation]=useState<Record<string,{
     valid:boolean
@@ -117,10 +119,14 @@ export function GenerationPage({
     setEditAssignmentId(entry.assignmentId)
     setEditDay(target?.day??entry.day)
     setEditSessionId(target?.sessionId??entry.sessionId)
+    const lock=(project.scheduleLocks??[]).find(item=>
+      item.assignmentId===entry.assignmentId&&item.day===entry.day&&item.sessionId===entry.sessionId
+    )
+    setEditLockMode(lock?.mode??'none')
     setEditError('')
   }
 
-  const persistEditedRun=(edited:GenerationRun)=>{
+  const persistEditedRun=(edited:GenerationRun,nextLocks=project.scheduleLocks??[])=>{
     if(!selectedRun)return
     const snapshot=saveGenerationUndo(project,'Edición manual del horario')
     setUndoSnapshot(snapshot)
@@ -133,6 +139,7 @@ export function GenerationPage({
         draftScheduleRun:draft,
         draftScheduleSavedAt:new Date().toISOString(),
         draftScheduleNeedsRevalidation:false,
+        scheduleLocks:nextLocks,
       },{intent:'draft'})
       setSelectedRunId(draft.id)
       setGenerationNotice('El horario establecido no se ha sobrescrito. El cambio manual se ha guardado como borrador revalidado.')
@@ -143,6 +150,7 @@ export function GenerationPage({
         draftScheduleRun:edited,
         draftScheduleSavedAt:new Date().toISOString(),
         draftScheduleNeedsRevalidation:false,
+        scheduleLocks:nextLocks,
       },{intent:'draft'})
       setSelectedRunId(edited.id)
       setGenerationNotice('Borrador actualizado y revalidado correctamente.')
@@ -153,6 +161,7 @@ export function GenerationPage({
         generationRuns:nextRuns,
         selectedGenerationRunId:edited.id,
         generationNeedsRevalidation:false,
+        scheduleLocks:nextLocks,
       },{intent:'generation'})
       setSelectedRunId(edited.id)
       setGenerationNotice('Propuesta actualizada manualmente y revalidada correctamente.')
@@ -171,7 +180,21 @@ export function GenerationPage({
       setEditError(result.message)
       return
     }
-    persistEditedRun(result.run)
+    const current=selectedRun.entries.find(entry=>entry.id===editEntryId)
+    const editedEntry=result.run.entries.find(entry=>entry.id===editEntryId)
+    const nextLocks=(project.scheduleLocks??[]).map(lock=>{
+      if(!current||!editedEntry)return lock
+      if(lock.assignmentId!==current.assignmentId||lock.day!==current.day||lock.sessionId!==current.sessionId)return lock
+      if(lock.mode==='full')return lock
+      return {
+        ...lock,
+        assignmentId:editedEntry.assignmentId,
+        teacherId:editedEntry.teacherId,
+        day:editedEntry.day,
+        sessionId:editedEntry.sessionId,
+      }
+    })
+    persistEditedRun(result.run,nextLocks)
     setEditEntryId('')
     setEditError('')
   }
@@ -190,8 +213,37 @@ export function GenerationPage({
       setGenerationNotice(result.message)
       return
     }
-    persistEditedRun(result.run)
+    const nextLocks=(project.scheduleLocks??[]).map(lock=>{
+      if(lock.assignmentId!==current.assignmentId||lock.day!==current.day||lock.sessionId!==current.sessionId)return lock
+      if(lock.mode!=='teacher')return lock
+      return {...lock,day,sessionId}
+    })
+    persistEditedRun(result.run,nextLocks)
     setDragEntryId('')
+  }
+
+  const saveEntryLock=()=>{
+    if(!selectedRun||!editEntry)return
+    const currentLocks=project.scheduleLocks??[]
+    const existing=currentLocks.find(lock=>
+      lock.assignmentId===editEntry.assignmentId&&lock.day===editEntry.day&&lock.sessionId===editEntry.sessionId
+    )
+    const without=currentLocks.filter(lock=>lock.id!==existing?.id)
+    const nextLocks=editLockMode==='none'
+      ? without
+      : [...without,{
+          id:existing?.id??'lock_'+crypto.randomUUID(),
+          assignmentId:editEntry.assignmentId,
+          day:editEntry.day,
+          sessionId:editEntry.sessionId,
+          teacherId:editEntry.teacherId,
+          mode:editLockMode,
+          createdAt:existing?.createdAt??new Date().toISOString(),
+        }]
+    saveProject({...project,scheduleLocks:nextLocks})
+    setGenerationNotice(editLockMode==='none'
+      ? 'Bloqueo eliminado. Las propuestas se conservan y deben revalidarse con la configuración actual.'
+      : 'Bloqueo guardado. Las propuestas se conservan y deben revalidarse antes de regenerar.')
   }
 
   const revalidateStoredSchedules=()=>{
@@ -651,6 +703,7 @@ export function GenerationPage({
             onDropEntry={dropScheduleEntry}
             dragEntryId={dragEntryId}
             onDragEntry={setDragEntryId}
+            locks={project.scheduleLocks??[]}
           />
         </section>}
       </>}
@@ -756,6 +809,18 @@ export function GenerationPage({
         <label><span>Sesión</span><select value={editSessionId} onChange={event=>setEditSessionId(event.target.value)}>
           {teachingBlocks.map(block=><option key={block.id} value={block.id}>{block.label} · {block.start}–{block.end}</option>)}
         </select></label>
+        <div className="schedule-lock-control">
+          <div><strong><Lock size={15}/> Protección de sesión</strong><small>Posición fija la franja; Docente impide cambiar de profesor; Completo protege ambos y la asignación.</small></div>
+          <select value={editLockMode} onChange={event=>setEditLockMode(event.target.value as ScheduleLockMode|'none')}>
+            <option value="none">Sin bloqueo</option>
+            <option value="position">Fijar posición</option>
+            <option value="teacher">Fijar docente</option>
+            <option value="full">Bloqueo completo</option>
+          </select>
+          <button type="button" className="btn secondary-light" onClick={saveEntryLock}>
+            {editLockMode==='none'?<Unlock size={15}/>:<Lock size={15}/>} Guardar bloqueo
+          </button>
+        </div>
         <div className="schedule-edit-safety"><CheckCircle2 size={17}/><span>El cambio solo se guardará si supera disponibilidad, solapes, carga, reglas HARD y auditoría completa.</span></div>
         {editError&&<div className="notice danger"><AlertTriangle size={17}/><span>{editError}</span></div>}
       </div>
@@ -795,7 +860,7 @@ function RunCard({
 }
 
 function SchedulePreview({
-  project,run,baselineRun,groupIds,onEdit,onDropEntry,dragEntryId,onDragEntry,
+  project,run,baselineRun,groupIds,onEdit,onDropEntry,dragEntryId,onDragEntry,locks,
 }:{
   project:ViyeuticaProject
   run:GenerationRun
@@ -805,6 +870,7 @@ function SchedulePreview({
   onDropEntry:(entryId:string,day:Weekday,sessionId:string)=>void
   dragEntryId:string
   onDragEntry:(entryId:string)=>void
+  locks:ViyeuticaProject['scheduleLocks']
 }) {
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
   return <div className="generation-multi-schedule">
@@ -850,6 +916,7 @@ function SchedulePreview({
                     <strong>{subject?.name??'Materia'}</strong>
                     <small>{teachers.join(' + ')}</small>
                     <Pencil size={12}/>
+                    {locks.some(lock=>lock.assignmentId===primary.assignmentId&&lock.day===primary.day&&lock.sessionId===primary.sessionId)&&<span className="schedule-cell-lock" title="Sesión bloqueada"><Lock size={11}/></span>}
                   </button>
                   {changed&&baselineRun&&<span className="proposal-diff-tooltip">{baselineCellLabel(project,baselineRun,groupId,day,block.id)}</span>}
                 </td>
