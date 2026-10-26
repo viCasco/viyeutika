@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CheckCircle2, History, LockKeyhole, Publish, UsersRound } from 'lucide-react'
+import { CheckCircle2, History, LockKeyhole, Share2, UsersRound } from 'lucide-react'
 import type { CollaborationRole, ViyeuticaProject } from '../domain/project'
 import { can, publishEstablishedSchedule, restorePublicationVersion, visiblePublishedRun } from '../domain/collaboration'
 import { saveProject } from '../store/projectStorage'
@@ -57,7 +57,7 @@ export function PublicationPage({project}:{project:ViyeuticaProject}){
   return <div className="wizard-page publication-page">
     <section className="wizard-intro">
       <div>
-        <h1 className="wizard-page-title"><Publish size={28}/> Publicación y colaboración</h1>
+        <h1 className="wizard-page-title"><Share2 size={28}/> Publicación y colaboración</h1>
         <p>Prepara roles, publicación controlada e historial de versiones. La colaboración multiusuario segura quedará habilitada cuando exista backend y autenticación.</p>
       </div>
     </section>
@@ -104,7 +104,7 @@ export function PublicationPage({project}:{project:ViyeuticaProject}){
       </div>
       <div className="publication-actions">
         <input value={label} onChange={e=>setLabel(e.target.value)} placeholder="Etiqueta de versión, opcional"/>
-        <button className="btn primary" disabled={!project.establishedScheduleRun||!can(role,'publish')} onClick={publish}><Publish size={16}/> Publicar horario establecido</button>
+        <button className="btn primary" disabled={!project.establishedScheduleRun||!can(role,'publish')} onClick={publish}><Share2 size={16}/> Publicar horario establecido</button>
         {project.collaboration.publicationStatus==='published'&&<button className="btn secondary-light" onClick={unpublish}>Retirar publicación</button>}
       </div>
       {!project.establishedScheduleRun&&<div className="inline-error">Primero guarda una propuesta válida como horario establecido.</div>}
