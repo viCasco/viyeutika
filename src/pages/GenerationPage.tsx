@@ -28,6 +28,7 @@ import {
 import { WizardStepper } from '../components/WizardStepper'
 import { AppModal } from '../components/AppModal'
 import { assignmentLabel, prepareScheduleEntryChange } from '../domain/scheduleEditing'
+import { recommendedRun, scheduleCellState, scheduleMetrics } from '../domain/scheduleMetrics'
 
 type GenerationAlternativeAction =
   | {kind:'review_plan';groupId:string}
@@ -56,6 +57,9 @@ export function GenerationPage({
 }) {
   const [selectedRunId,setSelectedRunId]=useState(project.selectedGenerationRunId??latestGeneration(project)?.id??'')
   const [selectedGroupIds,setSelectedGroupIds]=useState<string[]>(['all'])
+  const [viewMode,setViewMode]=useState<'group'|'teacher'|'center'>('group')
+  const [selectedTeacherId,setSelectedTeacherId]=useState(project.teachers.find(teacher=>teacher.active)?.id??'')
+  const [dayFilter,setDayFilter]=useState<'all'|Weekday>('all')
   const [running,setRunning]=useState(false)
   const [showClearModal,setShowClearModal]=useState(false)
   const [showRegenerateModal,setShowRegenerateModal]=useState(false)
@@ -106,7 +110,11 @@ export function GenerationPage({
     establishedRun ??
     latestGeneration(project)
   const activeGroups=project.groups.filter(group=>group.active)
+  const activeTeachers=project.teachers.filter(teacher=>teacher.active)
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
+  const visibleDays=dayFilter==='all'?project.schedule.activeDays:[dayFilter]
+  const comparisonRows=runs.map((run,index)=>({run,index,metrics:scheduleMetrics(project,run)}))
+  const recommended=recommendedRun(project,runs)
   const baselineRun=runs[0]??draftRun??establishedRun??null
   const regenerationReferences=[
     ...runs.map((run,index)=>({run,label:`Propuesta ${index+1}`})),
@@ -649,6 +657,27 @@ export function GenerationPage({
           </div>
         </section>
 
+        {runs.length>1&&<section className="proposal-comparison-card">
+          <div className="groups-table-heading">
+            <div><span className="panel-kicker">Comparador avanzado</span><h2>Indicadores homogéneos</h2><p>Solo se recomienda una propuesta si tiene cobertura completa y cero HARD tras auditoría.</p></div>
+          </div>
+          <div className="proposal-comparison-wrap"><table className="proposal-comparison-table">
+            <thead><tr><th>Propuesta</th><th>Cobertura</th><th>HARD</th><th>SOFT</th><th>Huecos docentes</th><th>Jornadas fragmentadas</th><th>Días medios</th><th>Cambios</th><th>Estado</th></tr></thead>
+            <tbody>{comparisonRows.map(({run,index,metrics})=><tr key={run.id} className={recommended?.run.id===run.id?'recommended':''}>
+              <td><button type="button" onClick={()=>{setSelectedRunId(run.id);saveProject({...project,selectedGenerationRunId:run.id},{intent:'selection'})}}>Propuesta {index+1}</button>{recommended?.run.id===run.id&&<em>Recomendada</em>}</td>
+              <td>{Math.round(metrics.coverage*100)}%</td>
+              <td>{metrics.hardViolations}</td>
+              <td>{metrics.softPenalty}</td>
+              <td>{metrics.totalTeacherGaps}</td>
+              <td>{metrics.fragmentedTeacherDays}</td>
+              <td>{metrics.averageTeachingDays.toFixed(1)}</td>
+              <td>{metrics.changeCount}</td>
+              <td>{metrics.valid?'Válida':'No válida'}</td>
+            </tr>)}</tbody>
+          </table></div>
+          {recommended&&<div className="proposal-recommendation"><Trophy size={17}/><span><strong>Propuesta recomendada: {runs.findIndex(run=>run.id===recommended.run.id)+1}.</strong> Se prioriza validez, menor penalización SOFT, menos huecos docentes, menos jornadas fragmentadas y, cuando existe referencia, menos cambios. La elección sigue siendo manual.</span></div>}
+        </section>}
+
         {selectedRun&&<section className="generation-result">
           <div className="generation-result-heading">
             <div>
@@ -697,24 +726,42 @@ export function GenerationPage({
             <button className="btn secondary-light" onClick={()=>setShowIssuesModal(true)}>Ver incidencias</button>
           </div>}
 
-          <div className="generation-toolbar generation-toolbar-tags">
+          <div className="generation-toolbar generation-view-toolbar">
             <div>
-              <span className="panel-kicker">Ver horarios de</span>
+              <span className="panel-kicker">Vista</span>
+              <div className="generation-view-switch">
+                <button type="button" className={viewMode==='group'?'active':''} onClick={()=>setViewMode('group')}>Por grupo</button>
+                <button type="button" className={viewMode==='teacher'?'active':''} onClick={()=>setViewMode('teacher')}>Por docente</button>
+                <button type="button" className={viewMode==='center'?'active':''} onClick={()=>setViewMode('center')}>Centro</button>
+              </div>
+            </div>
+            <div>
+              <span className="panel-kicker">Día</span>
               <div className="generation-group-tags">
-                <button
-                  type="button"
-                  className={selectedGroupIds.includes('all')?'active':''}
-                  onClick={()=>toggleGroup('all')}
-                >Todos</button>
-                {activeGroups.map(group=><button
-                  key={group.id}
-                  type="button"
-                  className={!selectedGroupIds.includes('all')&&selectedGroupIds.includes(group.id)?'active':''}
-                  onClick={()=>toggleGroup(group.id)}
-                >{group.name}</button>)}
+                <button type="button" className={dayFilter==='all'?'active':''} onClick={()=>setDayFilter('all')}>Todos</button>
+                {project.schedule.activeDays.map(day=><button type="button" key={day} className={dayFilter===day?'active':''} onClick={()=>setDayFilter(day)}>{dayLabels[day]}</button>)}
               </div>
             </div>
           </div>
+
+          {viewMode==='group'&&<div className="generation-toolbar generation-toolbar-tags">
+            <div>
+              <span className="panel-kicker">Grupos</span>
+              <div className="generation-group-tags">
+                <button type="button" className={selectedGroupIds.includes('all')?'active':''} onClick={()=>toggleGroup('all')}>Todos</button>
+                {activeGroups.map(group=><button key={group.id} type="button" className={!selectedGroupIds.includes('all')&&selectedGroupIds.includes(group.id)?'active':''} onClick={()=>toggleGroup(group.id)}>{group.name}</button>)}
+              </div>
+            </div>
+          </div>}
+
+          {viewMode==='teacher'&&<div className="generation-toolbar generation-toolbar-tags">
+            <div>
+              <span className="panel-kicker">Docente</span>
+              <div className="generation-group-tags">
+                {activeTeachers.map(teacher=><button key={teacher.id} type="button" className={selectedTeacherId===teacher.id?'active':''} onClick={()=>setSelectedTeacherId(teacher.id)}>{teacher.name}</button>)}
+              </div>
+            </div>
+          </div>}
 
           {comparisonRun&&selectedRun.id!==comparisonRun.id&&<div className="generation-diff-legend">
             <span className="diff-swatch"/>
@@ -725,17 +772,20 @@ export function GenerationPage({
             <span><Pencil size={16}/> Edición segura activa: pulsa una sesión o arrástrala a otra franja.</span>
             {undoSnapshot&&<button className="btn ghost-inline" onClick={undoLastGenerationChange}><Undo2 size={15}/> Deshacer último cambio</button>}
           </div>
-          <SchedulePreview
+          {viewMode==='group'&&<SchedulePreview
             project={project}
             run={selectedRun}
             baselineRun={comparisonRun}
             groupIds={visibleGroupIds}
+            days={visibleDays}
             onEdit={openScheduleEditor}
             onDropEntry={dropScheduleEntry}
             dragEntryId={dragEntryId}
             onDragEntry={setDragEntryId}
             locks={project.scheduleLocks??[]}
-          />
+          />}
+          {viewMode==='teacher'&&<TeacherSchedulePreview project={project} run={selectedRun} teacherId={selectedTeacherId} days={visibleDays} onEdit={openScheduleEditor}/>}
+          {viewMode==='center'&&<CenterSchedulePreview project={project} run={selectedRun} days={visibleDays} onEdit={openScheduleEditor}/>} 
         </section>}
       </>}
 
@@ -868,6 +918,19 @@ export function GenerationPage({
             {editLockMode==='none'?<Unlock size={15}/>:<Lock size={15}/>} Guardar bloqueo
           </button>
         </div>
+        {editEntry&&<div className="schedule-destination-map">
+          <div className="schedule-destination-legend"><strong>Destinos</strong><span className="compatible">Compatible</span><span className="soft">SOFT</span><span className="occupied">Ocupado / conflicto</span><span className="hard">No disponible HARD</span></div>
+          <div className="schedule-destination-grid">
+            {project.schedule.activeDays.flatMap(day=>teachingBlocks.map(block=>{
+              const rawState=scheduleCellState(project,project.draftScheduleRun?.id===selectedRun.id?project.draftScheduleRun:selectedRun,project.assignments.find(item=>item.id===editAssignmentId)?.teacherId??editEntry.teacherId,day,block.id)
+              const probe=prepareScheduleEntryChange(project,selectedRun,{entryId:editEntry.id,assignmentId:editAssignmentId,day,sessionId:block.id})
+              const state=probe.ok?(rawState==='soft'?'soft':'compatible'):(rawState==='hard'?'hard':'occupied')
+              return <button type="button" key={day+'-'+block.id} className={'destination-cell '+state+(editDay===day&&editSessionId===block.id?' selected':'')} onClick={()=>{if(probe.ok){setEditDay(day);setEditSessionId(block.id)}else setEditError(probe.message)}} disabled={state==='hard'}>
+                <strong>{dayLabels[day]}</strong><small>{block.label}</small>
+              </button>
+            }))}
+          </div>
+        </div>}
         <div className="schedule-edit-safety"><CheckCircle2 size={17}/><span>El cambio solo se guardará si supera disponibilidad, solapes, carga, reglas HARD y auditoría completa.</span></div>
         {editError&&<div className="notice danger"><AlertTriangle size={17}/><span>{editError}</span></div>}
       </div>
@@ -907,12 +970,13 @@ function RunCard({
 }
 
 function SchedulePreview({
-  project,run,baselineRun,groupIds,onEdit,onDropEntry,dragEntryId,onDragEntry,locks,
+  project,run,baselineRun,groupIds,days,onEdit,onDropEntry,dragEntryId,onDragEntry,locks,
 }:{
   project:ViyeuticaProject
   run:GenerationRun
   baselineRun:GenerationRun|null
   groupIds:string[]
+  days:Weekday[]
   onEdit:(entryId:string,target?:{day:Weekday;sessionId:string})=>void
   onDropEntry:(entryId:string,day:Weekday,sessionId:string)=>void
   dragEntryId:string
@@ -931,7 +995,7 @@ function SchedulePreview({
         </div>
         <div className="generated-schedule-wrap">
           <table className="generated-schedule">
-            <thead><tr><th>Sesión</th>{project.schedule.activeDays.map(day=><th key={day}>{dayLabels[day]}</th>)}</tr></thead>
+            <thead><tr><th>Sesión</th>{days.map(day=><th key={day}>{dayLabels[day]}</th>)}</tr></thead>
             <tbody>{teachingBlocks.map(block=><tr key={block.id}>
               <th><strong>{block.label}</strong><small>{block.start}–{block.end}</small></th>
               {project.schedule.activeDays.map(day=>{
@@ -974,6 +1038,71 @@ function SchedulePreview({
       </section>
     })}
   </div>
+}
+
+function TeacherSchedulePreview({
+  project,run,teacherId,days,onEdit,
+}:{
+  project:ViyeuticaProject
+  run:GenerationRun
+  teacherId:string
+  days:Weekday[]
+  onEdit:(entryId:string,target?:{day:Weekday;sessionId:string})=>void
+}){
+  const teacher=project.teachers.find(item=>item.id===teacherId)
+  const blocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
+  return <section className="generation-group-schedule">
+    <div className="generation-group-heading"><strong>{teacher?.name??'Selecciona docente'}</strong><small>Vista docente</small></div>
+    <div className="generated-schedule-wrap"><table className="generated-schedule">
+      <thead><tr><th>Sesión</th>{days.map(day=><th key={day}>{dayLabels[day]}</th>)}</tr></thead>
+      <tbody>{blocks.map(block=><tr key={block.id}>
+        <th><strong>{block.label}</strong><small>{block.start}–{block.end}</small></th>
+        {days.map(day=>{
+          const cell=run.entries.filter(entry=>entry.teacherId===teacherId&&entry.day===day&&entry.sessionId===block.id)
+          if(!cell.length)return <td key={day} className="empty-slot">—</td>
+          return <td key={day} className="schedule-edit-cell">{cell.map(entry=>{
+            const subject=project.subjects.find(item=>item.id===entry.subjectId)?.name??'Materia'
+            const group=project.groups.find(item=>item.id===entry.groupId)?.name??'Grupo'
+            const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
+            return <button type="button" className="schedule-entry-edit" key={entry.id} onClick={()=>onEdit(entry.id)}>
+              <strong>{subject}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><Pencil size={12}/>
+            </button>
+          })}</td>
+        })}
+      </tr>)}</tbody>
+    </table></div>
+  </section>
+}
+
+function CenterSchedulePreview({
+  project,run,days,onEdit,
+}:{
+  project:ViyeuticaProject
+  run:GenerationRun
+  days:Weekday[]
+  onEdit:(entryId:string,target?:{day:Weekday;sessionId:string})=>void
+}){
+  const blocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
+  return <section className="center-schedule-view">
+    {days.map(day=><article key={day} className="center-day-card">
+      <div className="generation-group-heading"><strong>{dayLabels[day]}</strong><small>{run.entries.filter(entry=>entry.day===day).length} actividades</small></div>
+      <div className="center-day-slots">{blocks.map(block=>{
+        const entries=run.entries.filter(entry=>entry.day===day&&entry.sessionId===block.id)
+        return <div className="center-slot" key={block.id}>
+          <header><strong>{block.label}</strong><small>{block.start}–{block.end}</small></header>
+          <div>{entries.map(entry=>{
+            const subject=project.subjects.find(item=>item.id===entry.subjectId)?.name??'Materia'
+            const group=project.groups.find(item=>item.id===entry.groupId)?.name??'Grupo'
+            const teacher=project.teachers.find(item=>item.id===entry.teacherId)?.name??'Docente'
+            const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
+            return <button type="button" key={entry.id} onClick={()=>onEdit(entry.id)}>
+              <strong>{group} · {subject}</strong><small>{teacher}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small>
+            </button>
+          })}</div>
+        </div>
+      })}</div>
+    </article>)}
+  </section>
 }
 
 function baselineCellLabel(
