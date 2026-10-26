@@ -56,6 +56,7 @@ function normalizeProject(raw:Partial<ViyeuticaProject>):ViyeuticaProject {
     teacherAvailability:Array.isArray(raw.teacherAvailability)?raw.teacherAvailability:[],
     assignments:Array.isArray(raw.assignments)?raw.assignments:[],
     rules:Array.isArray(raw.rules)?raw.rules:[],
+    scheduleLocks:Array.isArray(raw.scheduleLocks)?raw.scheduleLocks:[],
     generationRuns:Array.isArray(raw.generationRuns)?raw.generationRuns:[],
     selectedGenerationRunId:raw.selectedGenerationRunId??null,
     generationNeedsRevalidation:Boolean(raw.generationNeedsRevalidation),
@@ -77,6 +78,7 @@ function nextAcademicYear(project:ViyeuticaProject):ViyeuticaProject {
   return {
     ...project,
     academicYear:{id:start+'-'+end,label:start+'/'+end,startYear:start,endYear:end},
+    scheduleLocks:[],
     generationRuns:[],
     selectedGenerationRunId:null,
     generationNeedsRevalidation:false,
