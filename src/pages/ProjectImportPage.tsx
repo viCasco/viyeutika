@@ -54,7 +54,7 @@ function normalizeProject(raw:Partial<ViyeuticaProject>):ViyeuticaProject {
     studyPlan:Array.isArray(raw.studyPlan)?raw.studyPlan:[],
     teachers:Array.isArray(raw.teachers)?raw.teachers:[],
     teacherAvailability:Array.isArray(raw.teacherAvailability)
-      ? raw.teacherAvailability.map(item=>({...item,status:item.status==='assigned'?'available':item.status})) as ViyeuticaProject['teacherAvailability']
+      ? raw.teacherAvailability.map(item=>({...item,status:String((item as {status?:string}).status)==='assigned'?'available':item.status})) as ViyeuticaProject['teacherAvailability']
       : [],
     assignments:Array.isArray(raw.assignments)?raw.assignments:[],
     rules:Array.isArray(raw.rules)?raw.rules:[],
