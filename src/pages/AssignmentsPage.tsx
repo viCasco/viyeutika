@@ -20,8 +20,10 @@ type AvailabilityStatus=TeacherAvailability['status']
 
 interface AssignmentDraft {
   groupId:string
+  subgroupId:string
   subjectId:string
   teacherId:string
+  spaceId:string
   assignmentType:AssignmentType
   weeklySessions:string
   weeklyMinutes:string
@@ -36,7 +38,7 @@ interface AvailabilityDraft {
 }
 
 const emptyAssignment:AssignmentDraft={
-  groupId:'',subjectId:'',teacherId:'',assignmentType:'main',weeklySessions:'',weeklyMinutes:'',
+  groupId:'',subgroupId:'',subjectId:'',teacherId:'',spaceId:'',assignmentType:'main',weeklySessions:'',weeklyMinutes:'',
 }
 const emptyAvailability:AvailabilityDraft={
   teacherIds:[],days:[],sessions:[],status:'unavailable',detail:'',
@@ -383,23 +385,30 @@ export function AssignmentsPage({
     : []
 
 
-  const assignmentExists=(groupId:string,subjectId:string,type:AssignmentType,excludeId:string|null=editingId)=>
+  const assignmentExists=(
+    groupId:string,
+    subjectId:string,
+    type:AssignmentType,
+    excludeId:string|null=editingId,
+    subgroupId:string|null='__any__' as string|null,
+  )=>
     activeAssignments.some(assignment=>
       assignment.id!==excludeId&&
       assignment.groupId===groupId&&
       assignment.subjectId===subjectId&&
-      assignment.assignmentType===type
+      assignment.assignmentType===type&&
+      (subgroupId==='__any__'||(assignment.subgroupId??null)===subgroupId)
     )
 
   const groupMainComplete=(groupId:string)=>{
     const entries=project.studyPlan.filter(entry=>entry.active&&entry.groupId===groupId)
-    return entries.length>0&&entries.every(entry=>assignmentExists(groupId,entry.subjectId,'main',null))
+    return entries.length>0&&entries.every(entry=>assignmentExists(groupId,entry.subjectId,'main',null,null))
   }
 
   const bulkEligibleEntries=project.studyPlan.filter(entry=>
     entry.active&&
     entry.subjectId===bulkSubjectId&&
-    !assignmentExists(entry.groupId,entry.subjectId,'main',null)
+    !assignmentExists(entry.groupId,entry.subjectId,'main',null,null)
   )
 
   const applyBulkAssignment=()=>{
@@ -428,8 +437,10 @@ export function AssignmentsPage({
     const teacherId=defaultTeacherForAssignment(entry.groupId,entry.subjectId)
     return {
       groupId:entry.groupId,
+      subgroupId:'',
       subjectId:entry.subjectId,
       teacherId,
+      spaceId:'',
       assignmentType:assignmentTypeForStudyEntry(entry),
       weeklySessions:entry.weeklySessions>0?String(entry.weeklySessions):'',
       weeklyMinutes:(entry.weeklyMinutes??0)>0?String(entry.weeklyMinutes):'',
@@ -459,8 +470,10 @@ export function AssignmentsPage({
     const assignment:TeachingAssignment={
       id:uid('asg'),
       groupId:resolved.groupId,
+      subgroupId:resolved.subgroupId||null,
       subjectId:resolved.subjectId,
       teacherId:resolved.teacherId,
+      spaceId:resolved.spaceId||null,
       assignmentType:resolved.assignmentType,
       weeklySessions:resolved.weeklySessions?Number(resolved.weeklySessions):null,
       weeklyMinutes:resolved.weeklyMinutes?Number(resolved.weeklyMinutes):null,
@@ -500,6 +513,7 @@ export function AssignmentsPage({
       assignment.id!==editingId &&
       assignment.active &&
       assignment.groupId===draft.groupId &&
+      (assignment.subgroupId??null)===(draft.subgroupId||null) &&
       assignment.subjectId===draft.subjectId &&
       assignment.teacherId===draft.teacherId &&
       assignment.assignmentType===draft.assignmentType
@@ -512,8 +526,10 @@ export function AssignmentsPage({
     const assignment:TeachingAssignment={
       id:editingId??uid('asg'),
       groupId:draft.groupId,
+      subgroupId:draft.subgroupId||null,
       subjectId:draft.subjectId,
       teacherId:draft.teacherId,
+      spaceId:draft.spaceId||null,
       assignmentType:draft.assignmentType,
       weeklySessions:sessions,
       weeklyMinutes:minutes,
@@ -533,8 +549,10 @@ export function AssignmentsPage({
     setEditingId(assignment.id)
     setDraft({
       groupId:assignment.groupId,
+      subgroupId:assignment.subgroupId??'',
       subjectId:assignment.subjectId,
       teacherId:assignment.teacherId,
+      spaceId:assignment.spaceId??'',
       assignmentType:assignment.assignmentType,
       weeklySessions:assignment.weeklySessions===null?'':String(assignment.weeklySessions),
       weeklyMinutes:assignment.weeklyMinutes===null?'':String(assignment.weeklyMinutes),
@@ -547,8 +565,10 @@ export function AssignmentsPage({
     setEditingId(null)
     setDraft({
       groupId:assignment.groupId,
+      subgroupId:assignment.subgroupId??'',
       subjectId:assignment.subjectId,
       teacherId:assignment.teacherId,
+      spaceId:assignment.spaceId??'',
       assignmentType:assignment.assignmentType,
       weeklySessions:assignment.weeklySessions===null?'':String(assignment.weeklySessions),
       weeklyMinutes:assignment.weeklyMinutes===null?'':String(assignment.weeklyMinutes),
@@ -876,9 +896,11 @@ export function AssignmentsPage({
         <div className="app-modal-body">
           <div className="form-card-heading"><div className="form-card-number">06A</div><div><span className="panel-kicker">{editingId?'Edición':'Docencia'}</span><h2>{editingId?'Editar asignación':'Asignar docente'}</h2><p>Una misma materia puede tener titular, apoyo y codocencia mediante asignaciones independientes.</p></div></div>
           <div className="form-grid two">
-            <Field label="Grupo" required><select value={draft.groupId} onChange={e=>setDraft({...draft,groupId:e.target.value,subjectId:'',weeklySessions:'',weeklyMinutes:''})}><option value="">Selecciona...</option>{activeGroups.map(group=>{const complete=groupMainComplete(group.id)&&draft.assignmentType==='main';return <option key={group.id} value={group.id} disabled={complete}>{group.name}{complete?' · completo':''}</option>})}</select></Field>
-            <Field label="Materia" required><select value={draft.subjectId} disabled={!draft.groupId} onChange={e=>{const subjectId=e.target.value;const load=studyPlanLoad(draft.groupId,subjectId);const teacherId=defaultTeacherForAssignment(draft.groupId,subjectId);setShowOtherTeachers(false);setDraft({...draft,subjectId,teacherId,...load})}}> <option value="">Selecciona...</option>{groupSubjects(draft.groupId).map(subject=>{const assigned=assignmentExists(draft.groupId,subject.id,draft.assignmentType);return <option key={subject.id} value={subject.id} disabled={assigned}>{subject.name}{assigned?' · ya asignada':''}</option>})}</select></Field>
+            <Field label="Grupo" required><select value={draft.groupId} onChange={e=>setDraft({...draft,groupId:e.target.value,subgroupId:'',subjectId:'',weeklySessions:'',weeklyMinutes:''})}><option value="">Selecciona...</option>{activeGroups.map(group=>{const complete=groupMainComplete(group.id)&&draft.assignmentType==='main'&&!project.subgroups.some(subgroup=>subgroup.active&&subgroup.parentGroupId===group.id);return <option key={group.id} value={group.id} disabled={complete}>{group.name}{complete?' · completo':''}</option>})}</select></Field>
+            <Field label="Subgrupo / desdoble"><select value={draft.subgroupId} disabled={!draft.groupId} onChange={e=>setDraft({...draft,subgroupId:e.target.value,subjectId:''})}><option value="">Grupo completo</option>{project.subgroups.filter(subgroup=>subgroup.active&&subgroup.parentGroupId===draft.groupId).map(subgroup=><option key={subgroup.id} value={subgroup.id}>{subgroup.name}</option>)}</select></Field>
+            <Field label="Materia" required><select value={draft.subjectId} disabled={!draft.groupId} onChange={e=>{const subjectId=e.target.value;const load=studyPlanLoad(draft.groupId,subjectId);const teacherId=defaultTeacherForAssignment(draft.groupId,subjectId);setShowOtherTeachers(false);setDraft({...draft,subjectId,teacherId,...load})}}> <option value="">Selecciona...</option>{groupSubjects(draft.groupId).map(subject=>{const assigned=assignmentExists(draft.groupId,subject.id,draft.assignmentType,editingId,draft.subgroupId||null);return <option key={subject.id} value={subject.id} disabled={assigned}>{subject.name}{assigned?' · ya asignada':''}</option>})}</select></Field>
             <Field label="Docente" required><select value={draft.teacherId} disabled={!draft.subjectId} onChange={e=>{const value=e.target.value;if(value==='__others__'){setShowOtherTeachers(true);setDraft({...draft,teacherId:''});return}setDraft({...draft,teacherId:value})}}><option value="">Selecciona...</option>{visibleAssignmentTeachers.map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}{hasSpecialtyFilter&&!showOtherTeachers&&otherAssignmentTeachers.length>0&&<option value="__others__">Otros…</option>}{showOtherTeachers&&otherAssignmentTeachers.map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}</select>{showOtherTeachers&&hasSpecialtyFilter&&<button type="button" className="assignment-teacher-filter-reset" onClick={()=>{setShowOtherTeachers(false);setDraft({...draft,teacherId:''})}}>Volver a docentes compatibles</button>}</Field>
+            <Field label="Espacio"><select value={draft.spaceId} onChange={e=>setDraft({...draft,spaceId:e.target.value})}><option value="">Sin espacio fijo</option>{project.spaces.filter(space=>space.active).map(space=><option key={space.id} value={space.id}>{space.name} · {space.building}</option>)}</select></Field>
             <Field label="Tipo de intervención"><select value={draft.assignmentType} onChange={e=>{setShowOtherTeachers(false);setDraft({...draft,assignmentType:e.target.value as AssignmentType,subjectId:'',teacherId:'',weeklySessions:'',weeklyMinutes:''})}}>{(Object.entries(assignmentTypeLabels) as [AssignmentType,string][]).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>
             <Field label="Sesiones semanales"><input type="number" min="0" step="0.25" value={draft.weeklySessions} onChange={e=>setDraft({...draft,weeklySessions:e.target.value})} placeholder="Opcional"/></Field>
             <Field label="Minutos semanales"><input type="number" min="0" step="5" value={draft.weeklyMinutes} onChange={e=>setDraft({...draft,weeklyMinutes:e.target.value})} placeholder="Opcional"/></Field>
@@ -1045,15 +1067,17 @@ export function AssignmentsPage({
           : visibleAssignments.length===0
             ? <div className="groups-empty"><UsersRound size={28}/><strong>No hay asignaciones con estos filtros</strong><p>Cambia el grupo o docente seleccionado para mostrar resultados.</p></div>
             : <div className="groups-table-wrap"><table className="groups-table assignments-table">
-          <thead><tr><th>Grupo</th><th>Materia</th><th>Docente</th><th>Intervención</th><th>Ses./sem.</th><th>Min/sem.</th><th>Origen</th><th>Estado</th><th/></tr></thead>
+          <thead><tr><th>Grupo</th><th>Subgrupo</th><th>Materia</th><th>Docente</th><th>Espacio</th><th>Intervención</th><th>Ses./sem.</th><th>Min/sem.</th><th>Origen</th><th>Estado</th><th/></tr></thead>
           <tbody>{visibleAssignments.map(assignment=>{
             const group=project.groups.find(item=>item.id===assignment.groupId)
             const subject=project.subjects.find(item=>item.id===assignment.subjectId)
             const teacher=project.teachers.find(item=>item.id===assignment.teacherId)
             return <tr key={assignment.id} className={!assignment.active?'is-inactive':''}>
               <td><strong>{group?.name??'Grupo eliminado'}</strong></td>
+              <td>{assignment.subgroupId?project.subgroups.find(item=>item.id===assignment.subgroupId)?.name??'Subgrupo eliminado':'—'}</td>
               <td>{subject?.name??'Materia eliminada'}</td>
               <td>{teacher?.name??'Docente eliminado'}</td>
+              <td>{assignment.spaceId?project.spaces.find(item=>item.id===assignment.spaceId)?.name??'Espacio eliminado':'—'}</td>
               <td>{assignmentTypeLabels[assignment.assignmentType]}</td>
               <td>{assignment.weeklySessions??'—'}</td>
               <td>{assignment.weeklyMinutes??'—'}</td>
