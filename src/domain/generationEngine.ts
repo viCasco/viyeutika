@@ -6,18 +6,21 @@ import type {
   ViyeuticaProject,
   Weekday,
 } from './project'
-import { effectiveTeacherTeachingMinutes } from './project'
 import {
-  fixedSlotFromRule,
   softRuleFinalCost,
   softRulePlacementCost,
-  violatesAvoidRule,
-  violatesConsecutiveLimitRule,
-  violatesDailyLimitRule,
-  violatesWeeklyLoadRule,
 } from './ruleEngine'
+import {
+  fixedSlotsForAssignment,
+  placementDiagnostics,
+  requiredSessionsForAssignment,
+  teacherIsUnavailable,
+  teachingValidationSlots,
+  validatePlacement,
+  type ValidationSlot,
+} from './validationEngine'
 
-type Slot={day:Weekday;sessionId:string;order:number;duration:number}
+type Slot=ValidationSlot
 type Occupancy={
   group:Set<string>
   teacher:Set<string>
@@ -43,56 +46,23 @@ function shuffle<T>(items:T[],random:()=>number){
   return out
 }
 
-function minutes(block:TimeBlock){
-  const [sh,sm]=block.start.split(':').map(Number)
-  const [eh,em]=block.end.split(':').map(Number)
-  return (eh*60+em)-(sh*60+sm)
-}
-
-function sessionsRequired(project:ViyeuticaProject,assignment:TeachingAssignment,blocks:TimeBlock[]){
-  if((assignment.weeklySessions??0)>0) return Math.max(1,Math.round(assignment.weeklySessions!))
-  const entry=project.studyPlan.find(item=>item.active&&item.groupId===assignment.groupId&&item.subjectId===assignment.subjectId)
-  if(entry?.weeklySessions&&entry.weeklySessions>0) return Math.max(1,Math.round(entry.weeklySessions))
-  const target=(assignment.weeklyMinutes??0)>0?assignment.weeklyMinutes!:(entry?.weeklyMinutes??0)
-  if(target<=0) return 1
-  const durations=blocks.map(minutes).filter(v=>v>0).sort((a,b)=>a-b)
-  const median=durations[Math.floor(durations.length/2)]||45
-  return Math.max(1,Math.ceil(target/median))
+function sessionsRequired(project:ViyeuticaProject,assignment:TeachingAssignment,_blocks:TimeBlock[]){
+  return requiredSessionsForAssignment(project,assignment)
 }
 
 function unavailable(project:ViyeuticaProject,teacherId:string,slot:Slot){
-  return project.teacherAvailability.some(item=>
-    item.teacherId===teacherId &&
-    item.day===slot.day &&
-    item.session===slot.sessionId &&
-    (item.status==='unavailable'||item.status==='travel')
-  )
+  return teacherIsUnavailable(project,teacherId,slot)
 }
 
-function hardAllows(project:ViyeuticaProject,assignment:TeachingAssignment,slot:Slot,entries:GeneratedScheduleEntry[],occupancy:Occupancy,slots:Slot[]){
-  const key=slot.day+'|'+slot.sessionId
-  if(occupancy.group.has(assignment.groupId+'|'+key)) return false
-  if(occupancy.teacher.has(assignment.teacherId+'|'+key)) return false
-  if(unavailable(project,assignment.teacherId,slot)) return false
-
-  const teacher=project.teachers.find(item=>item.id===assignment.teacherId&&item.active)
-  const effectiveMaximum=teacher?effectiveTeacherTeachingMinutes(teacher):null
-  if(effectiveMaximum!==null){
-    const durationBySession=new Map(slots.map(item=>[item.sessionId,item.duration]))
-    const alreadyAssigned=entries
-      .filter(entry=>entry.teacherId===assignment.teacherId)
-      .reduce((total,entry)=>total+(durationBySession.get(entry.sessionId)??0),0)
-    if(alreadyAssigned+slot.duration>effectiveMaximum)return false
-  }
-
-  const orderBySession=new Map(slots.map(item=>[item.sessionId,item.order]))
-  for(const rule of project.rules.filter(r=>r.active&&r.ruleType==='HARD')){
-    if(violatesAvoidRule(rule,assignment,slot)) return false
-    if(violatesDailyLimitRule(rule,assignment,slot,entries)) return false
-    if(violatesWeeklyLoadRule(rule,assignment,entries)) return false
-    if(violatesConsecutiveLimitRule(rule,assignment,slot,entries,orderBySession)) return false
-  }
-  return true
+function hardAllows(
+  project:ViyeuticaProject,
+  assignment:TeachingAssignment,
+  slot:Slot,
+  entries:GeneratedScheduleEntry[],
+  _occupancy:Occupancy,
+  _slots:Slot[],
+){
+  return validatePlacement(project,assignment,slot,entries).allowed
 }
 
 function softCost(project:ViyeuticaProject,assignment:TeachingAssignment,slot:Slot,entries:GeneratedScheduleEntry[],slots:Slot[]){
@@ -103,12 +73,7 @@ function softCost(project:ViyeuticaProject,assignment:TeachingAssignment,slot:Sl
 }
 
 function fixedSlotsFor(project:ViyeuticaProject,assignment:TeachingAssignment){
-  const explicit=assignment.fixedSlots??[]
-  const fromRules=project.rules
-    .filter(rule=>rule.active&&rule.ruleType==='HARD')
-    .map(rule=>fixedSlotFromRule(rule,assignment))
-    .filter(Boolean) as {day:string;session:string}[]
-  return [...explicit,...fromRules] as {day:string;session:string}[]
+  return fixedSlotsForAssignment(project,assignment)
 }
 
 function addEntry(entries:GeneratedScheduleEntry[],occupancy:Occupancy,assignment:TeachingAssignment,slot:Slot){
@@ -146,11 +111,7 @@ function isFixedAt(project:ViyeuticaProject,assignment:TeachingAssignment,slot:S
 }
 
 function staticFeasibleSlots(project:ViyeuticaProject,assignment:TeachingAssignment,slots:Slot[]){
-  const hardRules=project.rules.filter(rule=>rule.active&&rule.ruleType==='HARD')
-  return slots.filter(slot=>{
-    if(unavailable(project,assignment.teacherId,slot))return false
-    return !hardRules.some(rule=>violatesAvoidRule(rule,assignment,slot))
-  }).length
+  return slots.filter(slot=>validatePlacement(project,assignment,slot,[]).allowed).length
 }
 
 function candidateScore(
@@ -295,40 +256,10 @@ function diagnosePlacementBlock(
   assignment:TeachingAssignment,
   slots:Slot[],
   entries:GeneratedScheduleEntry[],
-  occupancy:Occupancy,
+  _occupancy:Occupancy,
   fixedTarget?:{day:string;session:string},
 ){
-  const relevant=fixedTarget
-    ? slots.filter(slot=>slot.day===fixedTarget.day&&slot.sessionId===fixedTarget.session)
-    : slots
-  let unavailableCount=0
-  let groupBusyCount=0
-  let teacherBusyCount=0
-  let hardRuleCount=0
-
-  for(const slot of relevant){
-    const key=slot.day+'|'+slot.sessionId
-    if(unavailable(project,assignment.teacherId,slot)) unavailableCount++
-    if(occupancy.group.has(assignment.groupId+'|'+key)) groupBusyCount++
-    if(occupancy.teacher.has(assignment.teacherId+'|'+key)) teacherBusyCount++
-    if(project.rules.some(rule=>
-      rule.active&&rule.ruleType==='HARD'&&(
-        violatesAvoidRule(rule,assignment,slot)||
-        violatesDailyLimitRule(rule,assignment,slot,entries)||
-        violatesWeeklyLoadRule(rule,assignment,entries)||
-        violatesConsecutiveLimitRule(rule,assignment,slot,entries,new Map(slots.map(item=>[item.sessionId,item.order])))
-      )
-    )) hardRuleCount++
-  }
-
-  return {
-    candidateSlots:relevant.length,
-    unavailableCount,
-    groupBusyCount,
-    teacherBusyCount,
-    hardRuleCount,
-    fixedTarget:Boolean(fixedTarget),
-  }
+  return placementDiagnostics(project,assignment,slots,entries,fixedTarget)
 }
 
 function teacherGapPenalty(entries:GeneratedScheduleEntry[],slots:Slot[]){
@@ -364,10 +295,7 @@ function evaluateSoft(project:ViyeuticaProject,entries:GeneratedScheduleEntry[],
 
 function generateAttempt(project:ViyeuticaProject,attempt:number){
   const teachingBlocks=project.schedule.blocks.filter(b=>b.active&&b.type==='teaching')
-  const slots:Slot[]=[]
-  for(const day of project.schedule.activeDays){
-    teachingBlocks.forEach((block,index)=>slots.push({day,sessionId:block.id,order:index,duration:minutes(block)}))
-  }
+  const slots:Slot[]=teachingValidationSlots(project)
 
   const random=rng(hashSeed(project.academicYear.id+'|'+attempt))
   const entries:GeneratedScheduleEntry[]=[]
@@ -474,17 +402,8 @@ function generateAttempt(project:ViyeuticaProject,attempt:number){
     for(const slot of shuffle(baseSlots,random)){
       if(placed>=needed) break
       const teacherKey=assignment.teacherId+'|'+slot.day+'|'+slot.sessionId
-      if(occupancy.teacher.has(teacherKey)||unavailable(project,assignment.teacherId,slot)) continue
-      const supportTeacher=project.teachers.find(item=>item.id===assignment.teacherId&&item.active)
-      const supportMaximum=supportTeacher?effectiveTeacherTeachingMinutes(supportTeacher):null
-      if(supportMaximum!==null){
-        const durationBySession=new Map(slots.map(item=>[item.sessionId,item.duration]))
-        const alreadyAssigned=entries
-          .filter(entry=>entry.teacherId===assignment.teacherId)
-          .reduce((total,entry)=>total+(durationBySession.get(entry.sessionId)??0),0)
-        if(alreadyAssigned+slot.duration>supportMaximum)continue
-      }
-      // Para apoyo/codocencia permitimos compartir grupo, pero no docente.
+      if(!validatePlacement(project,assignment,slot,entries,{allowGroupOverlap:true}).allowed)continue
+      // Para apoyo/codocencia permitimos compartir grupo, pero aplicamos el resto de HARD.
       const entry:GeneratedScheduleEntry={
         id:uid('slot'),assignmentId:assignment.id,groupId:assignment.groupId,
         subjectId:assignment.subjectId,teacherId:assignment.teacherId,day:slot.day,sessionId:slot.sessionId,
