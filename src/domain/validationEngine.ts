@@ -97,6 +97,19 @@ export function teacherIsUnavailable(
   )
 }
 
+export function teacherAvoidsSlot(
+  project:ViyeuticaProject,
+  teacherId:string,
+  slot:Pick<ValidationSlot,'day'|'sessionId'>,
+){
+  return project.teacherAvailability.some(item=>
+    item.teacherId===teacherId&&
+    item.day===slot.day&&
+    item.session===slot.sessionId&&
+    item.status==='avoid'
+  )
+}
+
 export function fixedSlotsForAssignment(project:ViyeuticaProject,assignment:TeachingAssignment){
   const explicit=assignment.fixedSlots??[]
   const fromLocks=(project.scheduleLocks??[])
