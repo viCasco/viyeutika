@@ -214,6 +214,10 @@ export interface GenerationRun {
   score: number
   hardViolations: number
   softPenalty: number
+  generationStrategy?: 'optimize' | 'minimum_change'
+  referenceRunId?: string | null
+  changeCount?: number
+  changePenalty?: number
   placedSessions: number
   requestedSessions: number
   entries: GeneratedScheduleEntry[]
