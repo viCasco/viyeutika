@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  Building2, CalendarRange, FileInput, FileSearch, Gauge, GraduationCap, Layers3, LayoutGrid, Menu, PanelLeftClose,
+  Building2, CalendarRange, FileInput, FileSearch, Gauge, GraduationCap, LayoutGrid, Menu, Network, PanelLeftClose,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
@@ -31,7 +31,7 @@ const navigation = [
   { path: '/cursos', label: 'Curso académico', icon: CalendarDays },
   { path: '/normativa', label: 'Normativa', icon: FileSearch },
   { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
-  { path: '/subgrupos', label: 'Subgrupos y desdobles', icon: Layers3, iconSize: 22 },
+  { path: '/subgrupos', label: 'Subgrupos y desdobles', icon: Network },
   { path: '/espacios', label: 'Espacios y edificios', icon: Building2 },
   { path: '/operaciones', label: 'Sustituciones', icon: CalendarRange },
   { path: '/centro', label: 'Centro', icon: GraduationCap },
@@ -124,7 +124,7 @@ export default function App() {
           {navigation.map(item => {
             const Icon=item.icon
             const isActive=route===item.path
-            return <button key={item.path} className={'nav-item '+(isActive?'active':'')} onClick={() => go(item.path)} title={collapsed?item.label:undefined}><Icon size={'iconSize' in item ? item.iconSize : 19}/><span>{item.label}</span></button>
+            return <button key={item.path} className={'nav-item '+(isActive?'active':'')} onClick={() => go(item.path)} title={collapsed?item.label:undefined}><Icon size={19}/><span>{item.label}</span></button>
           })}
         </nav>
         <div className="sidebar-user"><span className="avatar">AD</span><div><strong>Administrador</strong><small>{centerName}</small></div><ChevronDown size={16}/></div>
