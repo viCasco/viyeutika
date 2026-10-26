@@ -83,8 +83,10 @@ export function prepareScheduleEntryChange(
     ...current,
     assignmentId:assignment.id,
     groupId:assignment.groupId,
+    subgroupId:assignment.subgroupId??null,
     subjectId:assignment.subjectId,
     teacherId:assignment.teacherId,
+    spaceId:assignment.spaceId??current.spaceId??null,
     day:change.day,
     sessionId:change.sessionId,
   }
