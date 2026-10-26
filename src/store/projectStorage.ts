@@ -51,10 +51,13 @@ export function loadProject(): ViyeuticaProject {
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
       generationRuns,
       selectedGenerationRunId,
+      generationNeedsRevalidation: Boolean(parsed.generationNeedsRevalidation),
       draftScheduleRun,
       draftScheduleSavedAt,
+      draftScheduleNeedsRevalidation: Boolean(parsed.draftScheduleNeedsRevalidation),
       establishedScheduleRun,
       establishedScheduleSavedAt,
+      establishedScheduleNeedsRevalidation: Boolean(parsed.establishedScheduleNeedsRevalidation),
       normativeSources: Array.isArray(parsed.normativeSources) ? parsed.normativeSources : [],
       normativeRules: Array.isArray(parsed.normativeRules) ? parsed.normativeRules : [],
       schedule: {
@@ -69,22 +72,50 @@ export function loadProject(): ViyeuticaProject {
   }
 }
 
+export type ProjectSaveIntent =
+  | 'configuration'
+  | 'generation'
+  | 'selection'
+  | 'draft'
+  | 'established'
+  | 'revalidation'
+  | 'clear_proposals'
+  | 'replace_project'
+
 function configurationFingerprint(project:ViyeuticaProject){
   const {
     generationRuns:_generationRuns,
     selectedGenerationRunId:_selectedGenerationRunId,
+    generationNeedsRevalidation:_generationNeedsRevalidation,
+    draftScheduleRun:_draftScheduleRun,
+    draftScheduleSavedAt:_draftScheduleSavedAt,
+    draftScheduleNeedsRevalidation:_draftScheduleNeedsRevalidation,
+    establishedScheduleRun:_establishedScheduleRun,
+    establishedScheduleSavedAt:_establishedScheduleSavedAt,
+    establishedScheduleNeedsRevalidation:_establishedScheduleNeedsRevalidation,
     updatedAt:_updatedAt,
     ...configuration
   }=project
   return JSON.stringify(configuration)
 }
 
+function markArtifactsForRevalidation(project:ViyeuticaProject):ViyeuticaProject {
+  return {
+    ...project,
+    generationNeedsRevalidation: project.generationRuns.length > 0,
+    draftScheduleNeedsRevalidation: Boolean(project.draftScheduleRun),
+    establishedScheduleNeedsRevalidation: Boolean(project.establishedScheduleRun),
+  }
+}
+
 export function saveProject(
   project: ViyeuticaProject,
-  options:{preserveGeneration?:boolean}={},
+  options:{intent?:ProjectSaveIntent;preserveGeneration?:boolean}={},
 ) {
+  const intent=options.intent ?? (options.preserveGeneration ? 'replace_project' : 'configuration')
   let nextProject=project
-  if(!options.preserveGeneration){
+
+  if(intent==='configuration'){
     try{
       const raw=window.localStorage.getItem(STORAGE_KEY)
       if(raw){
@@ -93,13 +124,28 @@ export function saveProject(
           current.schemaVersion===1 &&
           configurationFingerprint(current)!==configurationFingerprint(project)
         ){
-          nextProject={...project,generationRuns:[],selectedGenerationRunId:null}
+          nextProject=markArtifactsForRevalidation(project)
         }
       }
     }catch{
       // Si el estado previo no puede leerse, se guarda el nuevo proyecto tal como llega.
     }
   }
+
+  if(intent==='generation'){
+    nextProject={...nextProject,generationNeedsRevalidation:false}
+  }else if(intent==='draft'){
+    nextProject={...nextProject,draftScheduleNeedsRevalidation:false}
+  }else if(intent==='established'){
+    nextProject={
+      ...nextProject,
+      establishedScheduleNeedsRevalidation:false,
+      draftScheduleNeedsRevalidation:nextProject.draftScheduleRun ? nextProject.draftScheduleNeedsRevalidation : false,
+    }
+  }else if(intent==='clear_proposals'){
+    nextProject={...nextProject,generationNeedsRevalidation:false}
+  }
+
   const next = { ...nextProject, updatedAt: new Date().toISOString() }
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
   window.dispatchEvent(new CustomEvent(PROJECT_UPDATED_EVENT, { detail: next }))
