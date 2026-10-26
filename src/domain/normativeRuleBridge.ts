@@ -30,7 +30,9 @@ export function convertNormativeToCenterRule(
   return {
     id:uid(),
     scope:normativeRuleScope(rule),
-    ruleType:'HARD',
+    ruleType:rule.ruleClass==='preference'?'SOFT':'HARD',
+    originKind:'normative',
+    reviewStatus:'approved',
     code,
     description:rule.excerpt||rule.label,
     parameters:{
@@ -46,11 +48,11 @@ export function convertNormativeToCenterRule(
       reference:rule.reference??null,
       sourceName:source?.name??null,
     },
-    weight:null,
+    weight:rule.ruleClass==='preference'?3:null,
     source:'normative',
     normativeRuleId:rule.id,
     active:true,
-    reviewRequired:true,
+    reviewRequired:false,
   }
 }
 
