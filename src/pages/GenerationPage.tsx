@@ -88,6 +88,20 @@ export function GenerationPage({
   const establishedRun=project.establishedScheduleRun??null
   const selectedIsDraft=Boolean(selectedRun&&draftRun?.id===selectedRun.id)
   const selectedIsEstablished=Boolean(selectedRun&&establishedRun?.id===selectedRun.id)
+  const revalidateStoredSchedules=()=>{
+    const invalidRuns=runs.filter(run=>!proposalIsValid(run))
+    const draftValid=!draftRun||proposalIsValid(draftRun)
+    const establishedValid=!establishedRun||proposalIsValid(establishedRun)
+    saveProject({
+      ...project,
+      generationNeedsRevalidation:invalidRuns.length>0,
+      draftScheduleNeedsRevalidation:draftRun?!draftValid:false,
+      establishedScheduleNeedsRevalidation:establishedRun?!establishedValid:false,
+    },{intent:'revalidation'})
+    setGenerationNotice(invalidRuns.length||!draftValid||!establishedValid
+      ? 'La revalidación ha detectado horarios que ya no cumplen la configuración actual. Se conservan para revisión, pero debes corregir o regenerar antes de considerarlos vigentes.'
+      : 'Propuestas y horarios guardados revalidados correctamente con la configuración actual.')
+  }
 
   const saveSelectedAsDraft=()=>{
     if(!selectedRun||!proposalIsValid(selectedRun))return
@@ -96,7 +110,7 @@ export function GenerationPage({
       selectedGenerationRunId:selectedRun.id,
       draftScheduleRun:structuredClone(selectedRun),
       draftScheduleSavedAt:new Date().toISOString(),
-    },{preserveGeneration:true})
+    },{intent:'draft'})
     setShowDraftModal(false)
   }
 
@@ -109,7 +123,7 @@ export function GenerationPage({
       draftScheduleSavedAt:null,
       establishedScheduleRun:structuredClone(selectedRun),
       establishedScheduleSavedAt:new Date().toISOString(),
-    },{preserveGeneration:true})
+    },{intent:'established'})
     setShowEstablishModal(false)
   }
 
@@ -174,7 +188,7 @@ export function GenerationPage({
 
       const merged=mode==='replace'?additions:[...baseRuns,...additions]
       const selectedId=additions[0]?.id??project.selectedGenerationRunId??merged[0]?.id??null
-      saveProject({...project,generationRuns:merged,selectedGenerationRunId:selectedId})
+      saveProject({...project,generationRuns:merged,selectedGenerationRunId:selectedId},{intent:'generation'})
       if(selectedId)setSelectedRunId(selectedId)
       setShowRegenerateModal(false)
 
@@ -261,7 +275,7 @@ export function GenerationPage({
     const nextProject=projectWithAlternative(project,alternative)
     saveProject(nextProject)
     setSelectedRunId('')
-    setAppliedAlternative(alternative.title+' aplicada. Los horarios anteriores se han eliminado porque la configuración ha cambiado.')
+    setAppliedAlternative(alternative.title+' aplicada. Las propuestas anteriores se conservan y requieren revalidación porque la configuración ha cambiado.')
     setGenerationAlternatives([])
     setAlternativeSimulation({})
     setGenerationNotice('Configuración actualizada. Vuelve a generar para comprobar si ya existe una solución válida sin huecos.')
@@ -270,7 +284,7 @@ export function GenerationPage({
   const undoLastGenerationChange=()=>{
     const snapshot=loadGenerationUndo()
     if(!snapshot)return
-    saveProject(structuredClone(snapshot.project))
+    saveProject(structuredClone(snapshot.project),{intent:'replace_project'})
     clearGenerationUndo()
     setUndoSnapshot(null)
     setAppliedAlternative('Se ha restaurado la configuración anterior al último cambio.')
@@ -281,7 +295,7 @@ export function GenerationPage({
   }
 
   const clearRuns=()=>{
-    saveProject({...project,generationRuns:[],selectedGenerationRunId:null})
+    saveProject({...project,generationRuns:[],selectedGenerationRunId:null},{intent:'clear_proposals'})
     setSelectedRunId('')
     setShowClearModal(false)
   }
@@ -315,6 +329,12 @@ export function GenerationPage({
     </section>
 
     <WizardStepper currentStep={9} project={project} navigate={navigate}/>
+
+    {(project.generationNeedsRevalidation||project.draftScheduleNeedsRevalidation||project.establishedScheduleNeedsRevalidation)&&<section className="generation-uniqueness-notice generation-revalidation-notice">
+      <AlertTriangle size={18}/>
+      <span>La configuración ha cambiado desde que se guardaron una o más propuestas. Se conservan, pero necesitan revalidarse antes de considerarlas vigentes.</span>
+      <button className="btn secondary-light" onClick={revalidateStoredSchedules}>Revalidar ahora</button>
+    </section>}
 
     {runs.length===0&&<>
     <section className="generation-control-card">
@@ -414,7 +434,7 @@ export function GenerationPage({
                 baseline={run.id===first?.id}
                 onClick={()=>{
                   setSelectedRunId(run.id)
-                  saveProject({...project,selectedGenerationRunId:run.id})
+                  saveProject({...project,selectedGenerationRunId:run.id},{intent:'selection'})
                 }}
               />
             })}
