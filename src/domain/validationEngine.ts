@@ -6,7 +6,6 @@ import type {
   ViyeuticaProject,
   Weekday,
 } from './project'
-import { effectiveTeacherTeachingMinutes, timeBlockDuration } from './project'
 import {
   fixedSlotFromRule,
   violatesAvoidRule,
@@ -14,6 +13,23 @@ import {
   violatesDailyLimitRule,
   violatesWeeklyLoadRule,
 } from './ruleEngine'
+
+function minutesFromTime(value:string){
+  const [hours,minutes]=value.split(':').map(Number)
+  return Number.isFinite(hours)&&Number.isFinite(minutes)?hours*60+minutes:NaN
+}
+
+function timeBlockDuration(block:{start:string;end:string}){
+  return minutesFromTime(block.end)-minutesFromTime(block.start)
+}
+
+function effectiveTeacherTeachingMinutesLocal(teacher:ViyeuticaProject['teachers'][number]){
+  if(teacher.weeklyTeachingMinutes===null)return null
+  const dedicationMinutes=(teacher.dedications??[])
+    .filter(item=>item.status==='applicable'&&item.affectsTeachingLoad)
+    .reduce((total,item)=>total+((item.weeklyMinutes??0)>0?item.weeklyMinutes!:0),0)
+  return Math.max(0,teacher.weeklyTeachingMinutes-dedicationMinutes)
+}
 
 export interface ValidationSlot {
   day: Weekday
@@ -128,7 +144,7 @@ export function validatePlacement(
   }
 
   const teacher=project.teachers.find(item=>item.id===assignment.teacherId&&item.active)
-  const maximum=teacher?effectiveTeacherTeachingMinutes(teacher):null
+  const maximum=teacher?effectiveTeacherTeachingMinutesLocal(teacher):null
   if(maximum!==null&&teacherAssignedMinutes(project,entries,assignment.teacherId)+slot.duration>maximum){
     violations.push({code:'TEACHER_LOAD'})
   }
@@ -275,7 +291,7 @@ export function validateRunCore(project:ViyeuticaProject,run:GenerationRun):Audi
   }
 
   for(const teacher of project.teachers.filter(item=>item.active)){
-    const maximum=effectiveTeacherTeachingMinutes(teacher)
+    const maximum=effectiveTeacherTeachingMinutesLocal(teacher)
     if(maximum===null)continue
     const actual=teacherAssignedMinutes(project,run.entries,teacher.id)
     if(actual>maximum){
