@@ -173,6 +173,19 @@ export function auditGeneration(project:ViyeuticaProject,run:GenerationRun):Audi
     }
   }
 
+  for(const rule of project.rules.filter(item=>item.active&&item.originKind==='normative')){
+    const normative=rule.normativeRuleId?project.normativeRules.find(item=>item.id===rule.normativeRuleId):null
+    const source=normative?project.normativeSources.find(item=>item.id===normative.sourceId):null
+    if(rule.reviewStatus&&rule.reviewStatus!=='approved'){
+      push({severity:'warning',category:'Normativa',code:'NORMA_PENDIENTE_REVISION',message:'Hay una regla normativa activa cuyo estado de revisión no es aprobado.',detail:rule.description})
+    }
+    if(source?.validityStatus==='possibly_replaced'){
+      push({severity:'warning',category:'Normativa',code:'NORMA_POSIBLEMENTE_SUSTITUIDA',message:'Una regla activa procede de una fuente marcada como posiblemente sustituida.',detail:source.name+(normative?.page?' · pág. '+normative.page:'')})
+    }else if(source){
+      push({severity:'info',category:'Normativa',code:'TRAZA_NORMATIVA',message:'Regla normativa trazada a su fuente documental.',detail:source.name+(normative?.page?' · pág. '+normative.page:'')+(source.disposition?' · '+source.disposition:'')})
+    }
+  }
+
   const errors=issues.filter(issue=>issue.severity==='error').length
   const warnings=issues.filter(issue=>issue.severity==='warning').length
   const infos=issues.filter(issue=>issue.severity==='info').length
