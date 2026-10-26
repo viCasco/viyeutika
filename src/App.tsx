@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
   FileInput, FileSearch, Gauge, GraduationCap, LayoutGrid, Menu, PanelLeftClose,
-  ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
+  ShieldCheck, SlidersHorizontal, Sparkles, Table2, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
 import { PlaceholderPage } from './components/PlaceholderPage'
@@ -20,6 +20,7 @@ import { AssignmentsPage } from './pages/AssignmentsPage'
 import { RulesPage } from './pages/RulesPage'
 import { PrevalidationPage } from './pages/PrevalidationPage'
 import { GenerationPage } from './pages/GenerationPage'
+import { BulkEditPage } from './pages/BulkEditPage'
 import { useProject } from './hooks/useProject'
 import { useTheme } from './hooks/useTheme'
 
@@ -28,6 +29,7 @@ const navigation = [
   { path: '/cursos', label: 'Curso académico', icon: CalendarDays },
   { path: '/normativa', label: 'Normativa', icon: FileSearch },
   { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
+  { path: '/edicion-masiva', label: 'Edición masiva', icon: Table2 },
   { path: '/centro', label: 'Centro', icon: GraduationCap },
   { path: '/grupos', label: 'Estructura y grupos', icon: LayoutGrid },
   { path: '/jornada', label: 'Jornada y sesiones', icon: CalendarClock },
@@ -43,6 +45,7 @@ const descriptions: Record<string,string> = {
   '/cursos': 'Creación, histórico y estado de los cursos académicos.',
   '/normativa': 'Fuentes normativas, extracción de reglas y revisión antes de aplicar plantillas.',
   '/proyecto-json': 'Importación de plantillas y exportación de horarios, informes y respaldos.',
+  '/edicion-masiva': 'Edición rápida y pegado tabular validado para profesorado, plan y asignaciones.',
   '/profesorado': 'Plantilla docente, especialidades, jornadas, cargos y reducciones.',
   '/asignaciones': 'Relación entre grupos, materias, profesorado y responsabilidades docentes.',
   '/reglas': 'Restricciones legales, reglas del centro y preferencias ponderadas.',
@@ -90,6 +93,7 @@ export default function App() {
     if (route === '/materias') return <StudyPlanPage project={project} navigate={go}/>
     if (route === '/normativa') return <NormativePage project={project}/>
     if (route === '/proyecto-json') return <ProjectImportPage project={project} navigate={go}/>
+    if (route === '/edicion-masiva') return <BulkEditPage project={project} navigate={go}/>
     if (route === '/profesorado') return <StaffPage project={project} navigate={go}/>
     if (route === '/asignaciones') return <AssignmentsPage project={project} navigate={go}/>
     if (route === '/reglas') return <RulesPage project={project} navigate={go}/>
