@@ -1991,3 +1991,26 @@ button.btn:disabled:hover{
 .hero-logo-full img{width:180px;height:161px;object-fit:contain;object-position:center;background:#fff;border-radius:28px;padding:10px}
 .app-shell.is-collapsed .sidebar-brand{justify-content:center;padding-left:10px;padding-right:10px}
 @media(max-width:1080px){.hero-logo-full img{width:145px;height:130px}}
+
+/* === Saved schedule history badges === */
+.generation-run-main strong{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.generation-run-main .draft-inline-badge,
+.generation-run-main .established-inline-badge{
+  font-style:normal;
+  font-size:.68rem;
+  line-height:1;
+  padding:5px 7px;
+  border-radius:999px;
+  font-weight:800;
+  letter-spacing:.01em;
+}
+.generation-run-main .draft-inline-badge{
+  background:rgba(217,119,6,.12);
+  color:#9a5a00;
+  border:1px solid rgba(217,119,6,.22);
+}
+.generation-run-main .established-inline-badge{
+  background:rgba(22,163,74,.12);
+  color:#14733a;
+  border:1px solid rgba(22,163,74,.22);
+}
