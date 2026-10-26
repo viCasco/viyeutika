@@ -49,9 +49,9 @@ const assignmentTypeLabels:Record<AssignmentType,string>={
 }
 const availabilityLabels:Record<AvailabilityStatus,string>={
   available:'Disponible',
-  unavailable:'No disponible',
-  travel:'Desplazamiento',
-  assigned:'Fijado / asignado',
+  avoid:'Evitar · SOFT',
+  unavailable:'No disponible · HARD',
+  travel:'Desplazamiento · HARD',
 }
 const dayLabels:Record<Weekday,string>={
   L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado',
@@ -80,6 +80,9 @@ export function AssignmentsPage({
   const [availabilitySuggestion,setAvailabilitySuggestion]=useState('')
   const [availabilityExpanded,setAvailabilityExpanded]=useState(false)
   const [availabilityTeacherFilter,setAvailabilityTeacherFilter]=useState<'all'|string>('all')
+  const [availabilityGridTeacherId,setAvailabilityGridTeacherId]=useState(
+    project.teachers.find(teacher=>teacher.active)?.id??''
+  )
   const [assignmentsExpanded,setAssignmentsExpanded]=useState(false)
   const [assignmentGroupFilter,setAssignmentGroupFilter]=useState<'all'|string>('all')
   const [assignmentTeacherFilter,setAssignmentTeacherFilter]=useState<'all'|string>('all')
@@ -595,16 +598,18 @@ export function AssignmentsPage({
     ))
 
     const additions:TeacherAvailability[]=[]
-    for(const teacherId of availabilityDraft.teacherIds){
-      for(const day of availabilityDraft.days){
-        for(const session of sessions){
-          additions.push({
-            teacherId,
-            day,
-            session,
-            status:availabilityDraft.status,
-            detail:availabilityDraft.detail.trim(),
-          })
+    if(availabilityDraft.status!=='available'){
+      for(const teacherId of availabilityDraft.teacherIds){
+        for(const day of availabilityDraft.days){
+          for(const session of sessions){
+            additions.push({
+              teacherId,
+              day,
+              session,
+              status:availabilityDraft.status,
+              detail:availabilityDraft.detail.trim(),
+            })
+          }
         }
       }
     }
@@ -621,6 +626,29 @@ export function AssignmentsPage({
       current.teacherId===item.teacherId&&current.day===item.day&&current.session===item.session
     ))
   )
+
+  const cycleAvailabilityCell=(teacherId:string,day:Weekday,session:string)=>{
+    const current=project.teacherAvailability.find(item=>
+      item.teacherId===teacherId&&item.day===day&&item.session===session
+    )
+    const order:AvailabilityStatus[]=['available','avoid','unavailable','travel']
+    const currentStatus=current?.status??'available'
+    const next=order[(order.indexOf(currentStatus)+1)%order.length]
+    const filtered=project.teacherAvailability.filter(item=>!(
+      item.teacherId===teacherId&&item.day===day&&item.session===session
+    ))
+    if(next==='available'){
+      persistAvailability(filtered)
+      return
+    }
+    persistAvailability([...filtered,{
+      teacherId,
+      day,
+      session,
+      status:next,
+      detail:current?.detail??'',
+    }])
+  }
 
   const importedCount=project.assignments.filter(item=>item.source&&item.source!=='manual'&&item.source!=='duplicated').length
 
@@ -1063,8 +1091,36 @@ export function AssignmentsPage({
           })}
         </div>}
 
+        <div className="availability-weekly-grid-card">
+          <div className="availability-grid-heading">
+            <div><strong>Rejilla semanal</strong><small>Mismo modelo de disponibilidad. Pulsa una celda para alternar Disponible → Evitar SOFT → No disponible HARD → Desplazamiento HARD.</small></div>
+            <select value={availabilityGridTeacherId} onChange={event=>setAvailabilityGridTeacherId(event.target.value)}>
+              <option value="">Selecciona docente...</option>
+              {activeTeachers.map(teacher=><option key={teacher.id} value={teacher.id}>{teacher.name}</option>)}
+            </select>
+          </div>
+          {availabilityGridTeacherId&&<div className="availability-grid-wrap"><table className="availability-weekly-grid">
+            <thead><tr><th>Sesión</th>{project.schedule.activeDays.map(day=><th key={day}>{dayLabels[day]}</th>)}</tr></thead>
+            <tbody>{project.schedule.blocks.filter(block=>block.active&&block.type==='teaching').map(block=><tr key={block.id}>
+              <th><strong>{block.label}</strong><small>{block.start}–{block.end}</small></th>
+              {project.schedule.activeDays.map(day=>{
+                const item=project.teacherAvailability.find(value=>
+                  value.teacherId===availabilityGridTeacherId&&value.day===day&&value.session===block.id
+                )
+                const status=item?.status??'available'
+                return <td key={day}><button
+                  type="button"
+                  className={'availability-grid-cell '+status}
+                  onClick={()=>cycleAvailabilityCell(availabilityGridTeacherId,day,block.id)}
+                  title={availabilityLabels[status]}
+                >{availabilityLabels[status]}</button></td>
+              })}
+            </tr>)}</tbody>
+          </table></div>}
+        </div>
+
         {project.teacherAvailability.length===0
-          ? <div className="groups-empty"><CalendarClock size={26}/><strong>No hay restricciones temporales</strong><p>Añade únicamente las excepciones de disponibilidad que afecten al horario.</p></div>
+          ? <div className="groups-empty"><CalendarClock size={26}/><strong>No hay restricciones temporales</strong><p>Añade únicamente las excepciones HARD o preferencias SOFT que afecten al horario.</p></div>
           : visibleAvailability.length===0
             ? <div className="groups-empty"><CalendarClock size={26}/><strong>No hay restricciones para este docente</strong><p>Selecciona otro filtro para consultar sus restricciones.</p></div>
             : <div className="availability-list">{visibleAvailability.map((item,index)=>{
@@ -1091,7 +1147,7 @@ export function AssignmentsPage({
 
     <section className="section-info-grid">
       <article className="panel compact-info-panel"><UsersRound size={22}/><div><strong>Cobertura del plan</strong><p>Cada carga del Plan de estudios debe quedar vinculada al menos a una asignación docente activa.</p></div></article>
-      <article className="panel compact-info-panel"><CalendarClock size={22}/><div><strong>Disponibilidad</strong><p>Registra aquí únicamente excepciones por día y sesión; las restricciones se tendrán en cuenta durante la generación.</p></div></article>
+      <article className="panel compact-info-panel"><CalendarClock size={22}/><div><strong>Disponibilidad</strong><p>Disponible no penaliza; Evitar es SOFT; No disponible y Desplazamiento son HARD y nunca deben ocuparse.</p></div></article>
       <article className="panel compact-info-panel"><SlidersHorizontal size={22}/><div><strong>Intervenciones</strong><p>Titular, apoyo y codocencia se guardan como asignaciones independientes para mantener trazabilidad.</p></div></article>
     </section>
   </div>
