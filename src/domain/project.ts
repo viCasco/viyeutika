@@ -133,7 +133,7 @@ export interface TeacherAvailability {
   teacherId: string
   day: string
   session: string
-  status: 'available' | 'unavailable' | 'travel' | 'assigned'
+  status: 'available' | 'avoid' | 'unavailable' | 'travel'
   detail: string
 }
 
