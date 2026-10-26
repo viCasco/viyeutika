@@ -1981,3 +1981,13 @@ button.btn:disabled:hover{
   display:block;
   margin:0;
 }
+
+/* === V2 official PNG branding === */
+.brand-official,.brand-compact{background:#fff;overflow:hidden}
+.brand-official{padding:5px 8px}
+.brand-official img{width:100%;max-width:118px;height:46px;object-fit:contain;object-position:center}
+.brand-compact{width:50px;height:50px;padding:4px;display:grid;place-items:center}
+.brand-compact img{width:42px;height:42px;object-fit:contain;object-position:center}
+.hero-logo-full img{width:180px;height:161px;object-fit:contain;object-position:center;background:#fff;border-radius:28px;padding:10px}
+.app-shell.is-collapsed .sidebar-brand{justify-content:center;padding-left:10px;padding-right:10px}
+@media(max-width:1080px){.hero-logo-full img{width:145px;height:130px}}
