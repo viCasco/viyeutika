@@ -38,6 +38,28 @@ export function prepareScheduleEntryChange(
   if(!assignment)return {ok:false,run,message:'La asignación seleccionada no existe o está inactiva.'}
   if(!slot)return {ok:false,run,message:'La franja seleccionada no pertenece a la jornada lectiva activa.'}
 
+  const matchingLock=(project.scheduleLocks??[]).find(lock=>
+    lock.assignmentId===current.assignmentId&&lock.day===current.day&&lock.sessionId===current.sessionId
+  )
+  if(matchingLock){
+    if(
+      (matchingLock.mode==='position'||matchingLock.mode==='full')&&
+      (change.day!==current.day||change.sessionId!==current.sessionId)
+    ){
+      return {ok:false,run,message:'Movimiento rechazado: la posición de esta sesión está bloqueada.'}
+    }
+    const nextAssignment=project.assignments.find(item=>item.id===change.assignmentId&&item.active)
+    if(
+      (matchingLock.mode==='teacher'||matchingLock.mode==='full')&&
+      nextAssignment?.teacherId!==matchingLock.teacherId
+    ){
+      return {ok:false,run,message:'Movimiento rechazado: el docente de esta sesión está bloqueado.'}
+    }
+    if(matchingLock.mode==='full'&&change.assignmentId!==current.assignmentId){
+      return {ok:false,run,message:'Movimiento rechazado: esta sesión está bloqueada completamente.'}
+    }
+  }
+
   const remaining=run.entries.filter(entry=>entry.id!==change.entryId)
   const placement=validatePlacement(
     project,
