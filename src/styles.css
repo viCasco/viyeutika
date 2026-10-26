@@ -2036,3 +2036,13 @@ button.btn:disabled:hover{
 .schedule-edit-form .notice{grid-column:1/-1}
 [data-theme="dark"] .schedule-edit-safety{background:#172319;border-color:#385a2c;color:#9dce7b}
 @media(max-width:700px){.manual-edit-toolbar{align-items:flex-start;flex-direction:column}.schedule-edit-form{grid-template-columns:1fr}.schedule-edit-form label:first-child{grid-column:auto}}
+
+/* === Fase 3: bloqueos de sesiones === */
+.schedule-lock-control{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:10px 11px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.schedule-lock-control>div strong{display:flex;align-items:center;gap:6px;font-size:9px}
+.schedule-lock-control>div small{display:block;margin-top:3px;color:var(--muted);font-size:8px;line-height:1.4}
+.schedule-lock-control select{min-height:36px}
+.schedule-cell-lock{position:absolute;left:6px;top:6px;display:grid;place-items:center;width:18px;height:18px;border-radius:999px;background:#fff3cd;color:#8a6300;border:1px solid #e0c66a}
+.schedule-entry-edit:has(.schedule-cell-lock){padding-left:29px}
+[data-theme="dark"] .schedule-cell-lock{background:#332a12;color:#e3c979;border-color:#685726}
+@media(max-width:760px){.schedule-lock-control{grid-template-columns:1fr}.schedule-lock-control .btn{justify-self:start}}
