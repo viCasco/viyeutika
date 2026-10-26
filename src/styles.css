@@ -2114,7 +2114,7 @@ button.btn:disabled:hover{
 @media(max-width:700px){.regeneration-strategies{grid-template-columns:1fr}}
 
 /* === Fases 6-15: módulos avanzados === */
-.rule-library-card,.bulk-editor-card,.subgroup-create-card,.space-create-card,.collaboration-role-card,.teacher-publication-card,.publication-control-card,.temporary-change-form,.operational-preview-card{border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden;margin-bottom:16px}
+.rule-library-card,.bulk-editor-card,.subgroup-create-card,.space-create-card,.temporary-change-form,.operational-preview-card{border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden;margin-bottom:16px}
 .rule-library-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px}
 .rule-library-item{position:relative;display:flex;flex-direction:column;gap:5px;min-height:108px;padding:12px;border:1px solid var(--border);border-radius:11px;background:var(--surface);color:inherit;text-align:left;cursor:pointer}
 .rule-library-item:hover{border-color:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 12%,transparent)}
@@ -2176,21 +2176,15 @@ button.btn:disabled:hover{
 .normative-review-status{font-weight:850}.normative-review-status.pending{color:#9a6d13}.normative-review-status.approved{color:#4b8b24}.normative-review-status.rejected{color:#a42f2f}
 .normative-class-select{display:inline-flex;align-items:center;gap:5px;font-size:7.5px;color:var(--muted)}
 
-.collaboration-backend-notice{display:flex;gap:10px;align-items:flex-start;padding:13px 14px;margin-bottom:16px;border:1px solid #ddc670;border-radius:12px;background:#fff9e8;color:#765e15}.collaboration-backend-notice strong{font-size:9.5px}.collaboration-backend-notice p{margin:3px 0 0;font-size:8.2px;line-height:1.45}
-.collaboration-role-card{padding:14px}.collaboration-role-buttons{display:flex;gap:6px;margin:10px 0}.collaboration-role-buttons button{border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--muted);padding:8px 10px;font-size:8.5px;font-weight:850;cursor:pointer}.collaboration-role-buttons button.active{background:#edf4fb;color:var(--navy2);border-color:#b9cee2}
-.collaboration-permissions{display:flex;gap:6px;flex-wrap:wrap}.collaboration-permissions span{font-size:7.7px;border-radius:999px;background:#f4f7fa;border:1px solid var(--border);padding:5px 7px}
-.teacher-publication-card .groups-table-heading select,.publication-actions input,.operational-date input{min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 9px}
-.publication-status{font-size:8px;font-weight:900;border-radius:999px;padding:6px 8px}.publication-status.published{background:#e9f5e2;color:#4b8b24}.publication-status.draft{background:#eef1f5;color:#65727d}
-.publication-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px}.publication-actions input{min-width:240px;flex:1}
+.operational-date input{min-height:34px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);padding:0 9px}
 .operational-date{display:flex;align-items:center;gap:7px;font-size:8px;color:var(--muted)}.operational-issue-list{display:grid;gap:6px;padding:0 14px 14px}.operational-issue-list article{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:8px}.operational-issue-list article small{grid-column:2;color:var(--muted)}.operational-issue-list article.error{border-color:#e9b2b2}.operational-issue-list article.warning{border-color:#e6d493}
 
 [data-theme="dark"] .proposal-comparison-table tr.recommended,[data-theme="dark"] .proposal-recommendation,[data-theme="dark"] .destination-cell.compatible{background:#182718}
-[data-theme="dark"] .center-slot button,[data-theme="dark"] .space-chip-list>span,[data-theme="dark"] .collaboration-permissions span{background:#17202c}
-[data-theme="dark"] .collaboration-backend-notice{background:#2b2514;border-color:#605426;color:#d8c57a}
+[data-theme="dark"] .center-slot button,[data-theme="dark"] .space-chip-list>span{background:#17202c}
 [data-theme="dark"] .bulk-preview-table tr.bulk-invalid{background:#281818}[data-theme="dark"] .bulk-preview-table tr.bulk-valid{background:#172319}
 
 @media(max-width:1000px){.rule-library-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.normative-source-trace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.space-tools-grid{grid-template-columns:1fr}}
-@media(max-width:700px){.rule-library-grid{grid-template-columns:1fr}.schedule-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-navigation-card{align-items:flex-start;flex-direction:column}.normative-source-trace-grid{grid-template-columns:1fr}.collaboration-role-buttons{flex-direction:column}.publication-actions{align-items:stretch;flex-direction:column}.publication-actions input{min-width:0;width:100%}}
+@media(max-width:700px){.rule-library-grid{grid-template-columns:1fr}.schedule-destination-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bulk-navigation-card{align-items:flex-start;flex-direction:column}.normative-source-trace-grid{grid-template-columns:1fr}}
 
 /* === Importar | Exportar workspace === */
 .import-export-workspace-tabs{
