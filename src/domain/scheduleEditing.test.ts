@@ -53,6 +53,16 @@ describe('transactional schedule editing',()=>{
     expect(result.ok).toBe(false)
   })
 
+  it('rejects moving a position locked session',()=>{
+    const {project,run}=fixture()
+    project.scheduleLocks=[{
+      id:'lock-1',assignmentId:'a1',day:'L',sessionId:'s1',teacherId:'t1',mode:'position',createdAt:'2026-10-26T00:00:00.000Z',
+    }]
+    const result=prepareScheduleEntryChange(project,run,{entryId:'e1',assignmentId:'a1',day:'L',sessionId:'s2'})
+    expect(result.ok).toBe(false)
+    expect(result.message).toContain('posición')
+  })
+
   it('rejects a move to an unavailable teacher slot',()=>{
     const {project,run}=fixture()
     project.teacherAvailability=[{teacherId:'t1',day:'L',session:'s2',status:'unavailable',detail:'No disponible'}]
