@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 720" role="img" aria-labelledby="t d">
+<title id="t">Viyeutica</title><desc id="d">Símbolo de calendario en azul y verde con una V central y la palabra viYeutica.</desc>
+<defs>
+  <linearGradient id="n" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#123f80"/><stop offset="1" stop-color="#062050"/></linearGradient>
+  <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#6bd20f"/><stop offset="1" stop-color="#50b708"/></linearGradient>
+</defs>
+<g transform="translate(230 35)">
+  <path fill="url(#n)" d="M0 100c0-32 26-58 58-58h145v176l-34-39H0z"/>
+  <path fill="url(#g)" d="M247 42h145c32 0 58 26 58 58v79H281l-34 39z"/>
+  <path fill="url(#n)" d="M0 198h169l53 60v162H58c-32 0-58-26-58-58z"/>
+  <path fill="url(#n)" d="M450 198v164c0 32-26 58-58 58H228V258l53-60z"/>
+  <rect x="70" y="4" width="38" height="80" rx="19" fill="url(#n)" stroke="#fff" stroke-width="8"/>
+  <rect x="342" y="4" width="38" height="80" rx="19" fill="url(#n)" stroke="#fff" stroke-width="8"/>
+  <path d="M154 190 225 268l71-78h45L225 363 109 190z" fill="#fff"/>
+  <path d="M51 144h58" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+  <g fill="#fff">
+    <circle cx="302" cy="111" r="8"/><circle cx="338" cy="111" r="8"/><circle cx="374" cy="111" r="8"/>
+    <circle cx="302" cy="148" r="8"/><circle cx="338" cy="148" r="8"/><circle cx="374" cy="148" r="8"/>
+    <circle cx="302" cy="185" r="8"/><circle cx="338" cy="185" r="8"/><circle cx="374" cy="185" r="8"/>
+  </g>
+  <path d="M52 292h60M52 336h60" stroke="#fff" stroke-width="12" stroke-linecap="round"/>
+  <path d="m306 322 28 28 58-64" fill="none" stroke="#fff" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <path fill="#59bd0c" d="M225-45c7 31 22 46 53 53-31 7-46 22-53 53-7-31-22-46-53-53 31-7 46-22 53-53z"/>
+</g>
+<g font-family="Inter,Arial,sans-serif" font-weight="800" font-size="142" letter-spacing="-8">
+  <text x="190" y="650" fill="#07306b">vi</text>
+  <text x="320" y="650" fill="#59bd0c">Y</text>
+  <text x="420" y="650" fill="#07306b">eutica</text>
+</g>
+<circle cx="224" cy="545" r="15" fill="#59bd0c"/>
+<circle cx="742" cy="545" r="15" fill="#59bd0c"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<title id="title">Viyeutica</title><desc id="desc">Calendario dividido en cuatro cuadrantes con reloj, calendario 4x5, escuadra y validación alrededor de una V.</desc>
+<defs><linearGradient id="navy" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#123d7a"/><stop offset="1" stop-color="#062050"/></linearGradient><linearGradient id="green" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#69c818"/><stop offset="1" stop-color="#4aa908"/></linearGradient></defs>
+<path fill="url(#navy)" d="M86 125c0-31 25-56 56-56h92v154l-28-30H86z"/>
+<path fill="url(#green)" d="M278 69h92c31 0 56 25 56 56v68H306l-28 30z"/>
+<path fill="url(#navy)" d="M86 239h120l44 48v156H142c-31 0-56-25-56-56z"/>
+<path fill="url(#navy)" d="M426 239v148c0 31-25 56-56 56H262V287l44-48z"/>
+<rect x="145" y="34" width="34" height="73" rx="17" fill="url(#navy)" stroke="#fff" stroke-width="8"/>
+<rect x="333" y="34" width="34" height="73" rx="17" fill="url(#navy)" stroke="#fff" stroke-width="8"/>
+<path d="M206 214 256 267l50-53h42L256 385 164 214z" fill="#fff"/>
+<circle cx="161" cy="155" r="41" fill="none" stroke="#fff" stroke-width="9"/>
+<path d="M161 132v27l18 13" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<g fill="#fff">
+<circle cx="306" cy="132" r="6"/><circle cx="332" cy="132" r="6"/><circle cx="358" cy="132" r="6"/><circle cx="384" cy="132" r="6"/><circle cx="410" cy="132" r="6"/>
+<circle cx="306" cy="155" r="6"/><circle cx="332" cy="155" r="6"/><circle cx="358" cy="155" r="6"/><circle cx="384" cy="155" r="6"/><circle cx="410" cy="155" r="6"/>
+<circle cx="306" cy="178" r="6"/><circle cx="332" cy="178" r="6"/><circle cx="358" cy="178" r="6"/><circle cx="384" cy="178" r="6"/><circle cx="410" cy="178" r="6"/>
+<circle cx="306" cy="201" r="6"/><circle cx="332" cy="201" r="6"/><circle cx="358" cy="201" r="6"/><circle cx="384" cy="201" r="6"/><circle cx="410" cy="201" r="6"/>
+</g>
+<path d="M121 388V289l93 99zm26-27h35l-35-37z" fill="none" stroke="#fff" stroke-width="9" stroke-linejoin="round"/>
+<path d="M121 315h16M121 333h12M121 351h16M121 369h12" stroke="#fff" stroke-width="6" stroke-linecap="round"/>
+<path d="m326 348 23 23 48-53" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+<path fill="#59b411" d="M256 1c5 25 17 37 42 42-25 5-37 17-42 42-5-25-17-37-42-42 25-5 37-17 42-42z"/>
+</svg>

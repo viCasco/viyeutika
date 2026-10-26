@@ -1,0 +1,13 @@
+{
+  "name": "⩒Yeutika",
+  "short_name": "⩒Yeutika",
+  "description": "Planificación y generación inteligente de horarios escolares.",
+  "start_url": "/viyeutika/",
+  "scope": "/viyeutika/",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#062050",
+  "icons": [
+    {"src":"/viyeutika/brand/viyeutica-mark.svg","sizes":"any","type":"image/svg+xml"}
+  ]
+}
