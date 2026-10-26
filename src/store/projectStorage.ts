@@ -53,6 +53,7 @@ export function loadProject(): ViyeuticaProject {
       teacherAvailability: Array.isArray(parsed.teacherAvailability) ? parsed.teacherAvailability : [],
       assignments: Array.isArray(parsed.assignments) ? parsed.assignments : [],
       rules: Array.isArray(parsed.rules) ? parsed.rules : [],
+      scheduleLocks: Array.isArray(parsed.scheduleLocks) ? parsed.scheduleLocks : [],
       generationRuns,
       selectedGenerationRunId,
       generationNeedsRevalidation: Boolean(parsed.generationNeedsRevalidation),
