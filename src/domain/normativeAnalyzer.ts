@@ -159,6 +159,10 @@ function buildRulesForPage(pageText:string,page:number,sourceId:string):Normativ
       excerpt,
       confidence,
       approved:false,
+      ruleClass:strongNormative?'mandatory':'preference',
+      reviewStatus:'pending',
+      reviewedAt:null,
+      article:candidate.reference,
       relevance:inferRelevance(section,kind,excerpt),
       reference:candidate.reference,
     })
@@ -221,6 +225,12 @@ export async function analyzeNormativeFile(file:File){
   const source:NormativeSource={
     id:sourceId,
     name:file.name,
+    autonomousCommunity:'',
+    academicYear:'',
+    disposition:'',
+    article:'',
+    reviewedAt:null,
+    validityStatus:'unverified',
     mimeType:file.type||'application/octet-stream',
     size:file.size,
     pageCount:pages.length,
