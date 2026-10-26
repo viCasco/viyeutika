@@ -14,6 +14,7 @@ import {
   fixedSlotsForAssignment,
   placementDiagnostics,
   requiredSessionsForAssignment,
+  teacherAvoidsSlot,
   teacherIsUnavailable,
   teachingValidationSlots,
   validatePlacement,
@@ -123,6 +124,7 @@ function candidateScore(
   slots:Slot[],
 ){
   let score=softCost(project,assignment,slot,entries,slots)
+  if(teacherAvoidsSlot(project,assignment.teacherId,slot))score+=10
   const sameSubjectDay=entries.filter(entry=>
     entry.groupId===assignment.groupId&&
     entry.subjectId===assignment.subjectId&&
@@ -283,7 +285,7 @@ function teacherGapPenalty(entries:GeneratedScheduleEntry[],slots:Slot[]){
 }
 
 function evaluateSoft(project:ViyeuticaProject,entries:GeneratedScheduleEntry[],slots:Slot[]){
-  let penalty=0
+  let penalty=entries.filter(entry=>teacherAvoidsSlot(project,entry.teacherId,{day:entry.day,sessionId:entry.sessionId})).length*10
   const reduceGaps=project.rules.filter(r=>r.active&&r.ruleType==='SOFT'&&r.code==='REDUCIR_HUECOS_DOCENTES')
   for(const rule of reduceGaps) penalty+=teacherGapPenalty(entries,slots)*(rule.weight??1)
 
