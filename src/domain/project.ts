@@ -243,10 +243,13 @@ export interface ViyeuticaProject {
   rules: CenterRule[]
   generationRuns: GenerationRun[]
   selectedGenerationRunId?: string | null
+  generationNeedsRevalidation?: boolean
   draftScheduleRun?: GenerationRun | null
   draftScheduleSavedAt?: string | null
+  draftScheduleNeedsRevalidation?: boolean
   establishedScheduleRun?: GenerationRun | null
   establishedScheduleSavedAt?: string | null
+  establishedScheduleNeedsRevalidation?: boolean
   normativeSources: NormativeSource[]
   normativeRules: NormativeRule[]
   updatedAt: string | null
@@ -297,10 +300,13 @@ export const EMPTY_PROJECT: ViyeuticaProject = {
   rules: [],
   generationRuns: [],
   selectedGenerationRunId: null,
+  generationNeedsRevalidation: false,
   draftScheduleRun: null,
   draftScheduleSavedAt: null,
+  draftScheduleNeedsRevalidation: false,
   establishedScheduleRun: null,
   establishedScheduleSavedAt: null,
+  establishedScheduleNeedsRevalidation: false,
   normativeSources: [],
   normativeRules: [],
   updatedAt: null,
@@ -953,7 +959,13 @@ export function latestGeneration(project: ViyeuticaProject) {
 
 export function isGenerationComplete(project: ViyeuticaProject) {
   const latest=latestGeneration(project)
-  return Boolean(isPrevalidationComplete(project) && latest && latest.status==='complete' && latest.hardViolations===0)
+  return Boolean(
+    !project.generationNeedsRevalidation &&
+    isPrevalidationComplete(project) &&
+    latest &&
+    latest.status==='complete' &&
+    latest.hardViolations===0
+  )
 }
 
 
