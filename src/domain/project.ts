@@ -1,4 +1,5 @@
 import { isRuleAutomaticallyEvaluable, ruleConditionKind, ruleNumericValue } from './ruleEngine'
+import { requiredSessionsForAssignment } from './validationEngine'
 
 export type Ownership = 'publico' | 'concertado' | 'privado' | ''
 export type CenterType = 'CEIP' | 'IES' | 'CEIPSO' | 'CRA' | 'COLEGIO' | 'OTRO' | ''
@@ -671,28 +672,23 @@ export function runPrevalidation(project: ViyeuticaProject): PrevalidationIssue[
     )
   }
   for (const message of validateRules(project)) push('error','Reglas','REGLAS',message)
+  for(const rule of project.rules.filter(rule=>rule.active&&rule.ruleType==='HARD'&&!isRuleAutomaticallyEvaluable(rule))){
+    push(
+      'warning',
+      'Reglas',
+      'REGLA_HARD_NO_EVALUABLE',
+      `La regla HARD "${rule.description}" no puede evaluarse automáticamente todavía.`,
+      'Se conservará como obligatoria y deberá revisarse manualmente hasta que exista soporte explícito en el motor.',
+      rule.id,
+    )
+  }
 
   const activeTeachers = project.teachers.filter(t=>t.active)
   const activeAssignments = project.assignments.filter(a=>a.active)
 
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
   const teachingSlots=project.schedule.activeDays.length*teachingBlocks.length
-  const blockDurations=teachingBlocks
-    .map(block=>timeBlockDuration(block))
-    .filter(duration=>duration>0)
-    .sort((a,b)=>a-b)
-  const medianTeachingMinutes=blockDurations[Math.floor(blockDurations.length/2)]||45
-  const requiredSessions=(assignment:TeachingAssignment)=>{
-    if((assignment.weeklySessions??0)>0)return Math.max(1,Math.round(assignment.weeklySessions!))
-    const studyEntry=project.studyPlan.find(entry=>
-      entry.active&&entry.groupId===assignment.groupId&&entry.subjectId===assignment.subjectId
-    )
-    if((studyEntry?.weeklySessions??0)>0)return Math.max(1,Math.round(studyEntry!.weeklySessions))
-    const targetMinutes=(assignment.weeklyMinutes??0)>0
-      ? assignment.weeklyMinutes!
-      : (studyEntry?.weeklyMinutes??0)
-    return targetMinutes>0?Math.max(1,Math.ceil(targetMinutes/medianTeachingMinutes)):1
-  }
+  const requiredSessions=(assignment:TeachingAssignment)=>requiredSessionsForAssignment(project,assignment)
 
   if(teachingSlots>0){
     const mainSessionsByGroup=new Map<string,number>()
