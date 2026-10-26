@@ -59,6 +59,10 @@ export function GenerationPage({
   const [running,setRunning]=useState(false)
   const [showClearModal,setShowClearModal]=useState(false)
   const [showRegenerateModal,setShowRegenerateModal]=useState(false)
+  const [regenerationReferenceId,setRegenerationReferenceId]=useState(
+    project.establishedScheduleRun?.id??project.draftScheduleRun?.id??project.selectedGenerationRunId??''
+  )
+  const [regenerationStrategy,setRegenerationStrategy]=useState<'minimum_change'|'optimize'>('minimum_change')
   const [showIssuesModal,setShowIssuesModal]=useState(false)
   const [showEstablishModal,setShowEstablishModal]=useState(false)
   const [showDraftModal,setShowDraftModal]=useState(false)
@@ -104,6 +108,17 @@ export function GenerationPage({
   const activeGroups=project.groups.filter(group=>group.active)
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
   const baselineRun=runs[0]??draftRun??establishedRun??null
+  const regenerationReferences=[
+    ...runs.map((run,index)=>({run,label:`Propuesta ${index+1}`})),
+    ...(draftRun&&!runs.some(run=>run.id===draftRun.id)?[{run:draftRun,label:'Borrador guardado'}]:[]),
+    ...(establishedRun&&!runs.some(run=>run.id===establishedRun.id)&&draftRun?.id!==establishedRun.id
+      ? [{run:establishedRun,label:'Horario establecido'}]
+      : []),
+  ]
+  const selectedReferenceRun=selectedRun?.referenceRunId
+    ? regenerationReferences.find(item=>item.run.id===selectedRun.referenceRunId)?.run??null
+    : null
+  const comparisonRun=selectedReferenceRun??baselineRun
 
   const proposalIsValid=(run:GenerationRun)=>
     isGenerationProposalValid(project,run)&&auditGeneration(project,run).passed
@@ -302,7 +317,7 @@ export function GenerationPage({
     ? activeGroups.map(group=>group.id)
     : selectedGroupIds
 
-  const generateProposals=(mode:'initial'|'add'|'replace')=>{
+  const generateProposals=(mode:'initial'|'add'|'regenerate')=>{
     if(!isPrevalidationComplete(project)) return
     setRunning(true)
     setGenerationNotice('')
@@ -311,16 +326,29 @@ export function GenerationPage({
     setAppliedAlternative('')
     window.setTimeout(()=>{
       const stored=uniqueGenerationRuns(project.generationRuns)
-      const baseRuns=mode==='replace'?[]:stored
-      const existingSignatures=new Set(baseRuns.map(generationSignature))
+      const baseRuns=mode==='initial'?[]:stored
+      const reference=mode==='regenerate'
+        ? regenerationReferences.find(item=>item.run.id===regenerationReferenceId)?.run??selectedRun??null
+        : null
+      const existingSignatures=new Set([
+        ...baseRuns.map(generationSignature),
+        ...regenerationReferences.map(item=>generationSignature(item.run)),
+      ])
       const target=mode==='add'?1:3
       const additions:GenerationRun[]=[]
       const rejected:GenerationRun[]=[]
-      const maxSearch=mode==='add'?12:18
-      const baseIndex=project.generationRuns.length+(mode==='replace'?1000:0)
+      const maxSearch=mode==='add'?12:24
+      const baseIndex=project.generationRuns.length+(mode==='regenerate'?1000:0)
 
       for(let index=0;index<maxSearch&&additions.length<target;index++){
-        const result=generateSchedule(project,80,baseIndex+index+1)
+        const result=generateSchedule(
+          project,
+          80,
+          baseIndex+index+1,
+          mode==='regenerate'
+            ? {strategy:regenerationStrategy,referenceRun:reference,moveCost:40}
+            : {strategy:'optimize'}
+        )
         if(!proposalIsValid(result)){
           rejected.push(result)
           continue
@@ -331,26 +359,29 @@ export function GenerationPage({
         additions.push(result)
       }
 
-      if(mode==='replace'&&additions.length===0){
+      if(mode==='regenerate'&&additions.length===0){
         const diagnostic=[...rejected].sort((a,b)=>
           emptyGroupTeachingSlots(project,a).length-emptyGroupTeachingSlots(project,b).length ||
           a.hardViolations-b.hardViolations ||
           b.score-a.score
         )[0]
-        setGenerationNotice('No se ha encontrado ninguna propuesta válida nueva. Se mantienen las propuestas anteriores.')
+        setGenerationNotice('No se ha encontrado una alternativa válida nueva. La referencia y las propuestas existentes se mantienen intactas.')
         setGenerationAlternatives(buildGenerationAlternatives(project,diagnostic))
         setShowRegenerateModal(false)
         setRunning(false)
         return
       }
 
-      const merged=mode==='replace'?additions:[...baseRuns,...additions]
+      const merged=[...baseRuns,...additions]
       const selectedId=additions[0]?.id??project.selectedGenerationRunId??merged[0]?.id??null
       saveProject({...project,generationRuns:merged,selectedGenerationRunId:selectedId},{intent:'generation'})
       if(selectedId)setSelectedRunId(selectedId)
       setShowRegenerateModal(false)
 
-      if(additions.length===0&&baseRuns.length===0){
+      if(mode==='regenerate'&&additions.length){
+        const label=regenerationStrategy==='minimum_change'?'cambiando lo mínimo posible':'optimizando de nuevo'
+        setGenerationNotice(`Se han añadido ${additions.length} ${additions.length===1?'alternativa nueva':'alternativas nuevas'} ${label}. La referencia no se ha sobrescrito.`)
+      }else if(additions.length===0&&baseRuns.length===0){
         const diagnostic=[...rejected].sort((a,b)=>
           emptyGroupTeachingSlots(project,a).length-emptyGroupTeachingSlots(project,b).length ||
           a.hardViolations-b.hardViolations ||
@@ -379,7 +410,7 @@ export function GenerationPage({
   }
 
   const runGeneration=()=>generateProposals(runs.length===0?'initial':'add')
-  const regenerateThree=()=>generateProposals('replace')
+  const regenerateThree=()=>generateProposals('regenerate')
 
   const projectWithAlternative=(base:ViyeuticaProject,alternative:GenerationAlternative)=>{
     const action=alternative.action
@@ -685,9 +716,9 @@ export function GenerationPage({
             </div>
           </div>
 
-          {baselineRun&&selectedRun.id!==baselineRun.id&&<div className="generation-diff-legend">
+          {comparisonRun&&selectedRun.id!==comparisonRun.id&&<div className="generation-diff-legend">
             <span className="diff-swatch"/>
-            <span>Marcado = colocación distinta respecto a Propuesta 1</span>
+            <span>Marcado = colocación distinta respecto a {selectedReferenceRun?'la referencia de regeneración':'Propuesta 1'}</span>
           </div>}
 
           <div className="manual-edit-toolbar">
@@ -697,7 +728,7 @@ export function GenerationPage({
           <SchedulePreview
             project={project}
             run={selectedRun}
-            baselineRun={baselineRun}
+            baselineRun={comparisonRun}
             groupIds={visibleGroupIds}
             onEdit={openScheduleEditor}
             onDropEntry={dropScheduleEntry}
@@ -740,10 +771,26 @@ export function GenerationPage({
       onClose={()=>setShowRegenerateModal(false)}
       footer={<>
         <button className="btn secondary-light" onClick={()=>setShowRegenerateModal(false)}>Cancelar</button>
-        <button className="btn primary" disabled={running} onClick={regenerateThree}>{running?'Generando...':'Regenerar 3 propuestas'}</button>
+        <button className="btn primary" disabled={running||!regenerationReferenceId} onClick={regenerateThree}>{running?'Generando...':'Generar 3 alternativas'}</button>
       </>}
     >
-      <p>Se intentarán crear tres propuestas nuevas. <strong>Las propuestas actuales solo se sustituirán si se encuentra al menos una nueva propuesta válida.</strong></p>
+      <div className="regeneration-options">
+        <p>Genera nuevas alternativas tomando un horario como referencia. <strong>La referencia nunca se sobrescribe.</strong> Los bloqueos y reglas HARD tienen prioridad sobre cualquier objetivo de cambio mínimo.</p>
+        <label><span>Horario de referencia</span><select value={regenerationReferenceId} onChange={event=>setRegenerationReferenceId(event.target.value)}>
+          <option value="">Selecciona referencia...</option>
+          {regenerationReferences.map(item=><option key={item.run.id} value={item.run.id}>{item.label}</option>)}
+        </select></label>
+        <div className="regeneration-strategies">
+          <button type="button" className={regenerationStrategy==='minimum_change'?'active':''} onClick={()=>setRegenerationStrategy('minimum_change')}>
+            <strong>Cambiar lo mínimo posible</strong>
+            <small>Penaliza mover sesiones respecto a la referencia después de cumplir HARD y bloqueos.</small>
+          </button>
+          <button type="button" className={regenerationStrategy==='optimize'?'active':''} onClick={()=>setRegenerationStrategy('optimize')}>
+            <strong>Optimizar de nuevo</strong>
+            <small>Busca el mejor reparto sin penalizar los cambios respecto a la referencia.</small>
+          </button>
+        </div>
+      </div>
     </AppModal>}
 
     {showClearModal&&<AppModal
@@ -852,7 +899,7 @@ function RunCard({
     <Icon size={18}/>
     <span className="generation-run-main">
       <strong>{label}{best&&<em>Mejor</em>}{artifactKind==='draft'&&<em className="draft-inline-badge">Borrador</em>}{artifactKind==='established'&&<em className="established-inline-badge">Establecido</em>}</strong>
-      <small>{run.placedSessions}/{run.requestedSessions} sesiones · HARD {run.hardViolations} · SOFT {run.softPenalty}</small>
+      <small>{run.placedSessions}/{run.requestedSessions} sesiones · HARD {run.hardViolations} · SOFT {run.softPenalty}{run.referenceRunId?` · Cambios ${run.changeCount??0}`:''}</small>
       <small className="generation-difference">{baseline?'Referencia para comparar':difference===0?'Sin diferencias frente a la referencia':`${difference} colocaciones distintas frente a la referencia`}</small>
     </span>
     <span className="generation-run-score">{run.score}</span>
