@@ -16,6 +16,7 @@ import {
 import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
+import { DataViewControls, SortableTh, sortCollection, type DataView, type SortState } from '../components/DataCollectionView'
 import {
   applyInfantExtremaduraTemplate,
   applyPrimaryExtremaduraTemplate,
@@ -90,12 +91,34 @@ export function StudyPlanPage({
   const [entryModalOpen,setEntryModalOpen]=useState(false)
   const [subjectsExpanded,setSubjectsExpanded]=useState(false)
   const [entriesExpanded,setEntriesExpanded]=useState(false)
+  const [subjectsView,setSubjectsView]=useState<DataView>('table')
+  const [entriesView,setEntriesView]=useState<DataView>('table')
+  const [subjectsSort,setSubjectsSort]=useState<SortState<'name'|'code'|'stage'|'type'|'duration'|'active'>>({key:null,direction:'asc'})
+  const [entriesSort,setEntriesSort]=useState<SortState<'group'|'subject'|'sessions'|'minutes'|'mode'|'teacher'|'duration'|'active'>>({key:null,direction:'asc'})
 
   const activeGroups=project.groups.filter(group=>group.active)
   const activeSubjects=project.subjects.filter(subject=>subject.active)
   const activeEntries=project.studyPlan.filter(entry=>entry.active)
   const visibleSubjects=project.subjects.filter(subject=>subjectStageFilter==='all'||subject.stage===subjectStageFilter)
   const visibleEntries=project.studyPlan.filter(entry=>entryGroupFilter==='all'||entry.groupId===entryGroupFilter)
+  const displayedSubjects=sortCollection(visibleSubjects,subjectsSort,(subject,key)=>{
+    if(key==='name')return subject.name
+    if(key==='code')return subject.code
+    if(key==='stage')return subject.stage
+    if(key==='type')return subjectTypeLabel(subject.type)
+    if(key==='duration')return subject.defaultSessionMinutes??-1
+    return subject.active
+  })
+  const displayedEntries=sortCollection(visibleEntries,entriesSort,(entry,key)=>{
+    if(key==='group')return project.groups.find(group=>group.id===entry.groupId)?.name??''
+    if(key==='subject')return project.subjects.find(subject=>subject.id===entry.subjectId)?.name??''
+    if(key==='sessions')return entry.weeklySessions
+    if(key==='minutes')return entry.weeklyMinutes??-1
+    if(key==='mode')return planModeLabel(entry.mode)
+    if(key==='teacher')return teacherRequirementLabel(entry.teacherRequirement)
+    if(key==='duration')return entry.fixedSessionMinutes??-1
+    return entry.active
+  })
   const validation=useMemo(()=>validateStudyPlan(project),[project])
   const coveredGroups=new Set(activeEntries.map(entry=>entry.groupId)).size
   const weeklySessionTotal=activeEntries.reduce((sum,entry)=>sum+(entry.weeklySessions||0),0)
@@ -438,11 +461,35 @@ export function StudyPlanPage({
       <div className="groups-table-heading study-collapsible-heading">
         <button type="button" className="availability-collapse-toggle" onClick={()=>setSubjectsExpanded(value=>!value)} aria-expanded={subjectsExpanded} aria-label={subjectsExpanded?'Plegar catálogo':'Desplegar catálogo'}><ChevronDown size={17}/></button>
         <div className="availability-heading-copy"><span className="panel-kicker">Catálogo</span><h2>Materias <span className="availability-count">{project.subjects.length}</span></h2></div>
-        <button className="btn ghost-inline" onClick={openSubjectCreate}><Plus size={16}/> Añadir materia</button>
+        <div className="groups-table-actions">
+          <DataViewControls
+            view={subjectsView}
+            onView={setSubjectsView}
+            sort={subjectsSort}
+            onSort={setSubjectsSort}
+            options={[
+              {key:'name',label:'Materia'},{key:'code',label:'Código'},{key:'stage',label:'Etapa'},
+              {key:'type',label:'Tipo'},{key:'duration',label:'Duración'},{key:'active',label:'Estado'},
+            ]}
+          />
+          <button className="btn ghost-inline" onClick={openSubjectCreate}><Plus size={16}/> Añadir materia</button>
+        </div>
       </div>
       {subjectsExpanded&&<div className="study-collapsible-content">
         {project.subjects.length>0&&<div className="list-filter-tags" aria-label="Filtrar materias por etapa"><button type="button" className={subjectStageFilter==='all'?'active':''} onClick={()=>setSubjectStageFilter('all')}>Todas</button>{project.center.stages.map(stage=><button type="button" key={stage} className={subjectStageFilter===stage?'active':''} onClick={()=>setSubjectStageFilter(stage)}>{stage}</button>)}</div>}
-        {project.subjects.length===0?<Empty text="Todavía no hay materias en el catálogo."/>:visibleSubjects.length===0?<Empty text="No hay materias para esta etapa."/>:<div className="groups-table-wrap"><table className="groups-table"><thead><tr><th>Materia</th><th>Código</th><th>Etapa</th><th>Tipo</th><th>Duración</th><th>Estado</th><th/></tr></thead><tbody>{visibleSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><strong>{subject.name}</strong></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>}
+        {project.subjects.length===0?<Empty text="Todavía no hay materias en el catálogo."/>:visibleSubjects.length===0?<Empty text="No hay materias para esta etapa."/>:subjectsView==='table'?<div className="groups-table-wrap"><table className="groups-table"><thead><tr>
+          <SortableTh label="Materia" sortKey="name" state={subjectsSort} onSort={setSubjectsSort}/>
+          <SortableTh label="Código" sortKey="code" state={subjectsSort} onSort={setSubjectsSort}/>
+          <SortableTh label="Etapa" sortKey="stage" state={subjectsSort} onSort={setSubjectsSort}/>
+          <SortableTh label="Tipo" sortKey="type" state={subjectsSort} onSort={setSubjectsSort}/>
+          <SortableTh label="Duración" sortKey="duration" state={subjectsSort} onSort={setSubjectsSort}/>
+          <SortableTh label="Estado" sortKey="active" state={subjectsSort} onSort={setSubjectsSort}/>
+          <th/>
+        </tr></thead><tbody>{displayedSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><strong>{subject.name}</strong></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article className={'data-record-card '+(!subject.active?'is-inactive':'')} key={subject.id}>
+          <div className="data-record-card-heading"><div><strong>{subject.name}</strong><small>{subject.code||'Sin código'} · {subject.stage}</small></div><span className="tag">{subjectTypeLabel(subject.type)}</span></div>
+          <div className="data-record-card-data"><div><span>Duración</span><strong>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</strong></div><div><span>Estado</span><strong>{subject.active?'Activa':'Inactiva'}</strong></div></div>
+          <div className="data-record-card-footer"><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Editar" onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></div>
+        </article>)}</div>}
       </div>}
     </section>
 
@@ -450,15 +497,51 @@ export function StudyPlanPage({
       <div className="groups-table-heading study-collapsible-heading">
         <button type="button" className="availability-collapse-toggle" onClick={()=>setEntriesExpanded(value=>!value)} aria-expanded={entriesExpanded} aria-label={entriesExpanded?'Plegar cargas':'Desplegar cargas'}><ChevronDown size={17}/></button>
         <div className="availability-heading-copy"><span className="panel-kicker">Cargas</span><h2>Plan semanal por grupo <span className="availability-count">{project.studyPlan.length}</span></h2></div>
-        <button className="btn ghost-inline" onClick={openEntryCreate}><Plus size={16}/> Añadir carga</button>
+        <div className="groups-table-actions">
+          <DataViewControls
+            view={entriesView}
+            onView={setEntriesView}
+            sort={entriesSort}
+            onSort={setEntriesSort}
+            options={[
+              {key:'group',label:'Grupo'},{key:'subject',label:'Materia'},{key:'sessions',label:'Sesiones'},
+              {key:'minutes',label:'Carga semanal'},{key:'mode',label:'Organización'},
+              {key:'teacher',label:'Docente'},{key:'duration',label:'Duración'},{key:'active',label:'Estado'},
+            ]}
+          />
+          <button className="btn ghost-inline" onClick={openEntryCreate}><Plus size={16}/> Añadir carga</button>
+        </div>
       </div>
       {entriesExpanded&&<div className="study-collapsible-content">
         {project.studyPlan.length>0&&<div className="list-filter-tags" aria-label="Filtrar cargas por grupo"><button type="button" className={entryGroupFilter==='all'?'active':''} onClick={()=>setEntryGroupFilter('all')}>Todos</button>{activeGroups.map(group=><button type="button" key={group.id} className={entryGroupFilter===group.id?'active':''} onClick={()=>setEntryGroupFilter(group.id)}>{group.name}</button>)}</div>}
-        {project.studyPlan.length===0?<Empty text="Todavía no hay cargas semanales configuradas."/>:visibleEntries.length===0?<Empty text="No hay cargas configuradas para este grupo."/>:<div className="groups-table-wrap"><table className="groups-table plan-table"><thead><tr><th>Grupo</th><th>Materia</th><th>Ses./sem.</th><th>Carga semanal</th><th>Organización</th><th>Docente</th><th>Duración</th><th>Estado</th><th/></tr></thead><tbody>{visibleEntries.map(entry=>{
+        {project.studyPlan.length===0?<Empty text="Todavía no hay cargas semanales configuradas."/>:visibleEntries.length===0?<Empty text="No hay cargas configuradas para este grupo."/>:entriesView==='table'?<div className="groups-table-wrap"><table className="groups-table plan-table"><thead><tr>
+          <SortableTh label="Grupo" sortKey="group" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Materia" sortKey="subject" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Ses./sem." sortKey="sessions" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Carga semanal" sortKey="minutes" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Organización" sortKey="mode" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Docente" sortKey="teacher" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Duración" sortKey="duration" state={entriesSort} onSort={setEntriesSort}/>
+          <SortableTh label="Estado" sortKey="active" state={entriesSort} onSort={setEntriesSort}/>
+          <th/>
+        </tr></thead><tbody>{displayedEntries.map(entry=>{
           const group=project.groups.find(x=>x.id===entry.groupId)
           const subject=project.subjects.find(x=>x.id===entry.subjectId)
           return <tr key={entry.id} className={!entry.active?'is-inactive':''}><td><strong>{group?.name??'Grupo eliminado'}</strong></td><td>{subject?.name??'Materia eliminada'}</td><td>{entry.weeklySessions>0?entry.weeklySessions:'—'}</td><td>{entry.weeklyMinutes?formatWeeklyMinutes(entry.weeklyMinutes):'—'}</td><td>{planModeLabel(entry.mode)}</td><td>{teacherRequirementLabel(entry.teacherRequirement)}</td><td>{entry.fixedSessionMinutes?`${entry.fixedSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(entry.active?'active':'')} onClick={()=>toggleEntry(entry.id)}>{entry.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editEntry(entry)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeEntry(entry.id)}><Trash2 size={15}/></button></div></td></tr>
-        })}</tbody></table></div>}
+        })}</tbody></table></div>:<div className="data-card-grid">{displayedEntries.map(entry=>{
+          const group=project.groups.find(x=>x.id===entry.groupId)
+          const subject=project.subjects.find(x=>x.id===entry.subjectId)
+          return <article className={'data-record-card '+(!entry.active?'is-inactive':'')} key={entry.id}>
+            <div className="data-record-card-heading"><div><strong>{group?.name??'Grupo eliminado'} · {subject?.name??'Materia eliminada'}</strong><small>{planModeLabel(entry.mode)}</small></div><span className="tag">{entry.weeklySessions>0?`${entry.weeklySessions} ses.`:entry.weeklyMinutes?`${entry.weeklyMinutes} min`:'—'}</span></div>
+            <div className="data-record-card-data">
+              <div><span>Carga semanal</span><strong>{entry.weeklyMinutes?formatWeeklyMinutes(entry.weeklyMinutes):entry.weeklySessions>0?`${entry.weeklySessions} sesiones`:'—'}</strong></div>
+              <div><span>Requisito docente</span><strong>{teacherRequirementLabel(entry.teacherRequirement)}</strong></div>
+              <div><span>Duración</span><strong>{entry.fixedSessionMinutes?`${entry.fixedSessionMinutes} min`:'—'}</strong></div>
+              <div><span>Estado</span><strong>{entry.active?'Activa':'Inactiva'}</strong></div>
+            </div>
+            <div className="data-record-card-footer"><button className={'status-toggle '+(entry.active?'active':'')} onClick={()=>toggleEntry(entry.id)}>{entry.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Editar" onClick={()=>editEntry(entry)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeEntry(entry.id)}><Trash2 size={15}/></button></div></div>
+          </article>
+        })}</div>}
       </div>}
     </section>
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpDown, Building2, ChevronDown, Clock3, Plus, Trash2 } from 'lucide-react'
+import { DataViewControls, type DataView } from '../components/DataCollectionView'
 import { AppModal } from '../components/AppModal'
 import type { BuildingTravelTime, SchoolSpace, SpaceAvailability, ViyeuticaProject, Weekday } from '../domain/project'
 import { saveProject } from '../store/projectStorage'
@@ -10,11 +11,13 @@ const dayOrder:Record<Weekday,number>={L:0,M:1,X:2,J:3,V:4,S:5}
 
 type SpaceModal='space'|'availability'|'travel'|null
 type SortDirection='asc'|'desc'
-type SortState<K extends string>={key:K;direction:SortDirection}
+type SortState<K extends string>={key:K|null;direction:SortDirection}
 
 function compareText(a:string,b:string){return a.localeCompare(b,'es',{numeric:true,sensitivity:'base'})}
 function nextSort<K extends string>(current:SortState<K>,key:K):SortState<K>{
-  return current.key===key?{key,direction:current.direction==='asc'?'desc':'asc'}:{key,direction:'asc'}
+  if(current.key!==key)return {key,direction:'asc'}
+  if(current.direction==='asc')return {key,direction:'desc'}
+  return {key:null,direction:'asc'}
 }
 
 export function SpacesPage({
@@ -43,28 +46,35 @@ export function SpacesPage({
   const [assignmentsExpanded,setAssignmentsExpanded]=useState(false)
   const [availabilityExpanded,setAvailabilityExpanded]=useState(false)
   const [travelExpanded,setTravelExpanded]=useState(false)
+  const [spacesView,setSpacesView]=useState<DataView>('table')
+  const [reservationsView,setReservationsView]=useState<DataView>('table')
+  const [availabilityView,setAvailabilityView]=useState<DataView>('table')
+  const [travelView,setTravelView]=useState<DataView>('table')
 
   const [groupFilter,setGroupFilter]=useState('all')
   const [subjectFilter,setSubjectFilter]=useState('all')
   const [teacherFilter,setTeacherFilter]=useState('all')
 
-  const [spaceSort,setSpaceSort]=useState<SortState<'name'|'type'|'building'|'capacity'|'shared'>>({key:'name',direction:'asc'})
-  const [assignmentSort,setAssignmentSort]=useState<SortState<'group'|'subject'|'teacher'|'space'>>({key:'group',direction:'asc'})
-  const [availabilitySort,setAvailabilitySort]=useState<SortState<'space'|'day'|'session'>>({key:'space',direction:'asc'})
-  const [travelSort,setTravelSort]=useState<SortState<'from'|'to'|'minutes'>>({key:'from',direction:'asc'})
+  const [spaceSort,setSpaceSort]=useState<SortState<'name'|'type'|'building'|'capacity'|'shared'>>({key:null,direction:'asc'})
+  const [assignmentSort,setAssignmentSort]=useState<SortState<'group'|'subject'|'teacher'|'space'>>({key:null,direction:'asc'})
+  const [availabilitySort,setAvailabilitySort]=useState<SortState<'space'|'day'|'session'>>({key:null,direction:'asc'})
+  const [travelSort,setTravelSort]=useState<SortState<'from'|'to'|'minutes'>>({key:null,direction:'asc'})
 
   const buildings=[...new Set(project.spaces.map(space=>space.building).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'))
   const activeGroups=project.groups.filter(item=>item.active)
   const activeSubjects=project.subjects.filter(item=>item.active)
   const activeTeachers=project.teachers.filter(item=>item.active)
 
-  const sortedSpaces=useMemo(()=>[...project.spaces].sort((a,b)=>{
-    let result=0
-    if(spaceSort.key==='capacity')result=(a.capacity??-1)-(b.capacity??-1)
-    else if(spaceSort.key==='shared')result=Number(a.shared)-Number(b.shared)
-    else result=compareText(String(a[spaceSort.key]??''),String(b[spaceSort.key]??''))
-    return spaceSort.direction==='asc'?result:-result
-  }),[project.spaces,spaceSort])
+  const sortedSpaces=useMemo(()=>{
+    if(!spaceSort.key)return project.spaces
+    return [...project.spaces].sort((a,b)=>{
+      let result=0
+      if(spaceSort.key==='capacity')result=(a.capacity??-1)-(b.capacity??-1)
+      else if(spaceSort.key==='shared')result=Number(a.shared)-Number(b.shared)
+      else result=compareText(String(a[spaceSort.key]??''),String(b[spaceSort.key]??''))
+      return spaceSort.direction==='asc'?result:-result
+    })
+  },[project.spaces,spaceSort])
 
   const assignmentRows=useMemo(()=>project.assignments.filter(item=>item.active).map(assignment=>({
     assignment,
@@ -76,7 +86,10 @@ export function SpacesPage({
     (groupFilter==='all'||row.assignment.groupId===groupFilter)&&
     (subjectFilter==='all'||row.assignment.subjectId===subjectFilter)&&
     (teacherFilter==='all'||row.assignment.teacherId===teacherFilter)
-  ).sort((a,b)=>{
+  ),[project.assignments,project.groups,project.subjects,project.teachers,project.spaces,groupFilter,subjectFilter,teacherFilter])
+  const sortedAssignmentRows=useMemo(()=>{
+    if(!assignmentSort.key)return assignmentRows
+    return [...assignmentRows].sort((a,b)=>{
     const av=assignmentSort.key==='group'?a.group?.name??''
       :assignmentSort.key==='subject'?a.subject?.name??''
       :assignmentSort.key==='teacher'?a.teacher?.name??''
@@ -86,10 +99,13 @@ export function SpacesPage({
       :assignmentSort.key==='teacher'?b.teacher?.name??''
       :b.space?.name??''
     const result=compareText(av,bv)
-    return assignmentSort.direction==='asc'?result:-result
-  }),[project.assignments,project.groups,project.subjects,project.teachers,project.spaces,groupFilter,subjectFilter,teacherFilter,assignmentSort])
+      return assignmentSort.direction==='asc'?result:-result
+    })
+  },[assignmentRows,assignmentSort])
 
-  const sortedAvailability=useMemo(()=>[...project.spaceAvailability].sort((a,b)=>{
+  const sortedAvailability=useMemo(()=>{
+    if(!availabilitySort.key)return project.spaceAvailability
+    return [...project.spaceAvailability].sort((a,b)=>{
     let result=0
     if(availabilitySort.key==='space'){
       result=compareText(
@@ -103,15 +119,19 @@ export function SpacesPage({
       const bBlock=project.schedule.blocks.find(block=>block.id===b.sessionId)
       result=compareText(aBlock?.start??aBlock?.label??a.sessionId,bBlock?.start??bBlock?.label??b.sessionId)
     }
-    return availabilitySort.direction==='asc'?result:-result
-  }),[project.spaceAvailability,project.spaces,project.schedule.blocks,availabilitySort])
+      return availabilitySort.direction==='asc'?result:-result
+    })
+  },[project.spaceAvailability,project.spaces,project.schedule.blocks,availabilitySort])
 
-  const sortedTravel=useMemo(()=>[...project.buildingTravelTimes].sort((a,b)=>{
+  const sortedTravel=useMemo(()=>{
+    if(!travelSort.key)return project.buildingTravelTimes
+    return [...project.buildingTravelTimes].sort((a,b)=>{
     const result=travelSort.key==='minutes'
       ? a.minutes-b.minutes
       : compareText(travelSort.key==='from'?a.fromBuilding:a.toBuilding,travelSort.key==='from'?b.fromBuilding:b.toBuilding)
-    return travelSort.direction==='asc'?result:-result
-  }),[project.buildingTravelTimes,travelSort])
+      return travelSort.direction==='asc'?result:-result
+    })
+  },[project.buildingTravelTimes,travelSort])
 
   const closeModal=()=>setModal(null)
 
@@ -234,12 +254,17 @@ export function SpacesPage({
       <div className="groups-table-heading study-collapsible-heading">
         <button type="button" className="availability-collapse-toggle" onClick={()=>setSpacesExpanded(value=>!value)} aria-expanded={spacesExpanded} aria-label={spacesExpanded?'Plegar espacios':'Desplegar espacios'}><ChevronDown size={17}/></button>
         <div className="availability-heading-copy"><span className="panel-kicker">Inventario</span><h2>Espacios <span className="availability-count">{project.spaces.length}</span></h2></div>
-        <button className="btn ghost-inline" onClick={()=>setModal('space')}><Plus size={16}/> Añadir espacio</button>
+        <div className="groups-table-actions">
+          <DataViewControls view={spacesView} onView={setSpacesView} sort={spaceSort} onSort={setSpaceSort} options={[
+            {key:'name',label:'Espacio'},{key:'type',label:'Tipo'},{key:'building',label:'Edificio'},{key:'capacity',label:'Capacidad'},{key:'shared',label:'Compartido'},
+          ]}/>
+          <button className="btn ghost-inline" onClick={()=>setModal('space')}><Plus size={16}/> Añadir espacio</button>
+        </div>
       </div>
       {spacesExpanded&&<div className="study-collapsible-content">
         {project.spaces.length===0
           ? <div className="groups-empty"><Building2 size={28}/><strong>No hay espacios configurados</strong><p>Añade solo los recursos que necesiten reserva o tengan restricciones de horario.</p></div>
-          : <div className="groups-table-wrap"><table className="groups-table sortable-table">
+          : spacesView==='table' ? <div className="groups-table-wrap"><table className="groups-table sortable-table">
             <thead><tr>
               <SortHeader label="Espacio" sortKey="name" state={spaceSort} onSort={key=>setSpaceSort(nextSort(spaceSort,key))}/>
               <SortHeader label="Tipo" sortKey="type" state={spaceSort} onSort={key=>setSpaceSort(nextSort(spaceSort,key))}/>
@@ -249,7 +274,11 @@ export function SpacesPage({
               <th/>
             </tr></thead>
             <tbody>{sortedSpaces.map(space=><tr key={space.id}><td><strong>{space.name}</strong></td><td>{space.type}</td><td>{space.building}</td><td>{space.capacity??'—'}</td><td>{space.shared?'Sí':'No'}</td><td><button className="row-delete" onClick={()=>removeSpace(space.id)}><Trash2 size={15}/></button></td></tr>)}</tbody>
-          </table></div>}
+          </table></div> : <div className="data-card-grid">{sortedSpaces.map(space=><article className="data-record-card" key={space.id}>
+            <div className="data-record-card-heading"><div><strong>{space.name}</strong><small>{space.type} · {space.building}</small></div><span className="tag">{space.shared?'Compartido':'Exclusivo'}</span></div>
+            <div className="data-record-card-data"><div><span>Capacidad</span><strong>{space.capacity??'—'}</strong></div><div><span>Edificio</span><strong>{space.building}</strong></div></div>
+            <div className="data-record-card-footer"><span/><button className="row-delete" title="Eliminar" onClick={()=>removeSpace(space.id)}><Trash2 size={15}/></button></div>
+          </article>)}</div>}
       </div>}
     </section>
 
@@ -257,7 +286,12 @@ export function SpacesPage({
       <div className="groups-table-heading study-collapsible-heading">
         <button type="button" className="availability-collapse-toggle" onClick={()=>setAssignmentsExpanded(value=>!value)} aria-expanded={assignmentsExpanded} aria-label={assignmentsExpanded?'Plegar reservas':'Desplegar reservas'}><ChevronDown size={17}/></button>
         <div className="availability-heading-copy"><span className="panel-kicker">Asignaciones</span><h2>Reserva por actividad <span className="availability-count">{project.assignments.filter(item=>item.active).length}</span></h2></div>
-        <button className="btn ghost-inline" onClick={()=>navigate('/asignaciones')}>Ir a Asignaciones</button>
+        <div className="groups-table-actions">
+          <DataViewControls view={reservationsView} onView={setReservationsView} sort={assignmentSort} onSort={setAssignmentSort} options={[
+            {key:'group',label:'Grupo'},{key:'subject',label:'Materia'},{key:'teacher',label:'Docente'},{key:'space',label:'Espacio'},
+          ]}/>
+          <button className="btn ghost-inline" onClick={()=>navigate('/asignaciones')}>Ir a Asignaciones</button>
+        </div>
       </div>
       {assignmentsExpanded&&<div className="study-collapsible-content">
         {project.assignments.filter(item=>item.active).length>0&&<div className="spaces-filter-stack">
@@ -269,20 +303,24 @@ export function SpacesPage({
           ? <div className="groups-empty"><Building2 size={28}/><strong>No hay asignaciones activas</strong><p>Configura primero las asignaciones docentes del curso.</p></div>
           : assignmentRows.length===0
             ? <div className="groups-empty"><Building2 size={28}/><strong>Sin resultados para estos filtros</strong><p>Cambia alguno de los filtros de grupo, materia o docente.</p></div>
-            : <div className="groups-table-wrap"><table className="groups-table sortable-table">
+            : reservationsView==='table' ? <div className="groups-table-wrap"><table className="groups-table sortable-table">
               <thead><tr>
                 <SortHeader label="Grupo" sortKey="group" state={assignmentSort} onSort={key=>setAssignmentSort(nextSort(assignmentSort,key))}/>
                 <SortHeader label="Materia" sortKey="subject" state={assignmentSort} onSort={key=>setAssignmentSort(nextSort(assignmentSort,key))}/>
                 <SortHeader label="Docente" sortKey="teacher" state={assignmentSort} onSort={key=>setAssignmentSort(nextSort(assignmentSort,key))}/>
                 <SortHeader label="Espacio" sortKey="space" state={assignmentSort} onSort={key=>setAssignmentSort(nextSort(assignmentSort,key))}/>
               </tr></thead>
-              <tbody>{assignmentRows.map(({assignment,group,subject,teacher})=><tr key={assignment.id}>
+              <tbody>{sortedAssignmentRows.map(({assignment,group,subject,teacher})=><tr key={assignment.id}>
                 <td>{group?.name??'—'}</td>
                 <td>{subject?.name??'—'}</td>
                 <td>{teacher?.name??'—'}</td>
                 <td><select value={assignment.spaceId??''} onChange={e=>assignSpace(assignment.id,e.target.value)}><option value="">Sin espacio fijo</option>{project.spaces.filter(space=>space.active).map(space=><option key={space.id} value={space.id}>{space.name} · {space.building}</option>)}</select></td>
               </tr>)}</tbody>
-            </table></div>}
+            </table></div> : <div className="data-card-grid">{sortedAssignmentRows.map(({assignment,group,subject,teacher,space})=><article className="data-record-card" key={assignment.id}>
+              <div className="data-record-card-heading"><div><strong>{group?.name??'—'} · {subject?.name??'—'}</strong><small>{teacher?.name??'—'}</small></div></div>
+              <div className="data-record-card-data"><div><span>Espacio</span><strong>{space?.name??'Sin espacio fijo'}</strong></div></div>
+              <div className="data-record-card-footer"><span/><select value={assignment.spaceId??''} onChange={e=>assignSpace(assignment.id,e.target.value)}><option value="">Sin espacio fijo</option>{project.spaces.filter(space=>space.active).map(space=><option key={space.id} value={space.id}>{space.name} · {space.building}</option>)}</select></div>
+            </article>)}</div>}
       </div>}
     </section>
 
@@ -290,12 +328,17 @@ export function SpacesPage({
       <div className="groups-table-heading study-collapsible-heading">
         <button type="button" className="availability-collapse-toggle" onClick={()=>setAvailabilityExpanded(value=>!value)} aria-expanded={availabilityExpanded} aria-label={availabilityExpanded?'Plegar franjas':'Desplegar franjas'}><ChevronDown size={17}/></button>
         <div className="availability-heading-copy"><span className="panel-kicker">Disponibilidad</span><h2>Franjas no disponibles <span className="availability-count">{project.spaceAvailability.length}</span></h2></div>
-        <button className="btn ghost-inline" disabled={project.spaces.filter(space=>space.active).length===0} onClick={()=>setModal('availability')}><Plus size={16}/> Añadir bloqueo</button>
+        <div className="groups-table-actions">
+          <DataViewControls view={availabilityView} onView={setAvailabilityView} sort={availabilitySort} onSort={setAvailabilitySort} options={[
+            {key:'space',label:'Espacio'},{key:'day',label:'Día'},{key:'session',label:'Sesión'},
+          ]}/>
+          <button className="btn ghost-inline" disabled={project.spaces.filter(space=>space.active).length===0} onClick={()=>setModal('availability')}><Plus size={16}/> Añadir bloqueo</button>
+        </div>
       </div>
       {availabilityExpanded&&<div className="study-collapsible-content">
         {project.spaceAvailability.length===0
           ? <div className="groups-empty"><Clock3 size={28}/><strong>Sin bloqueos de espacio</strong><p>Todos los espacios se consideran disponibles salvo las restricciones que añadas.</p></div>
-          : <div className="groups-table-wrap"><table className="groups-table sortable-table">
+          : availabilityView==='table' ? <div className="groups-table-wrap"><table className="groups-table sortable-table">
             <thead><tr>
               <SortHeader label="Espacio" sortKey="space" state={availabilitySort} onSort={key=>setAvailabilitySort(nextSort(availabilitySort,key))}/>
               <SortHeader label="Día" sortKey="day" state={availabilitySort} onSort={key=>setAvailabilitySort(nextSort(availabilitySort,key))}/>
@@ -308,7 +351,11 @@ export function SpacesPage({
               <td>{project.schedule.blocks.find(block=>block.id===item.sessionId)?.label??item.sessionId}</td>
               <td><button className="row-delete" onClick={()=>removeAvailability(item)}><Trash2 size={15}/></button></td>
             </tr>)}</tbody>
-          </table></div>}
+          </table></div> : <div className="data-card-grid">{sortedAvailability.map((item,index)=><article className="data-record-card" key={`${item.spaceId}-${item.day}-${item.sessionId}-${index}`}>
+            <div className="data-record-card-heading"><div><strong>{project.spaces.find(space=>space.id===item.spaceId)?.name??'Espacio eliminado'}</strong><small>{dayLabels[item.day]}</small></div></div>
+            <div className="data-record-card-data"><div><span>Sesión</span><strong>{project.schedule.blocks.find(block=>block.id===item.sessionId)?.label??item.sessionId}</strong></div></div>
+            <div className="data-record-card-footer"><span/><button className="row-delete" onClick={()=>removeAvailability(item)}><Trash2 size={15}/></button></div>
+          </article>)}</div>}
       </div>}
     </section>
 
@@ -316,19 +363,26 @@ export function SpacesPage({
       <div className="groups-table-heading study-collapsible-heading">
         <button type="button" className="availability-collapse-toggle" onClick={()=>setTravelExpanded(value=>!value)} aria-expanded={travelExpanded} aria-label={travelExpanded?'Plegar desplazamientos':'Desplegar desplazamientos'}><ChevronDown size={17}/></button>
         <div className="availability-heading-copy"><span className="panel-kicker">Edificios</span><h2>Tiempos de desplazamiento <span className="availability-count">{project.buildingTravelTimes.length}</span></h2></div>
-        <button className="btn ghost-inline" disabled={buildings.length<2} onClick={()=>setModal('travel')}><Plus size={16}/> Añadir desplazamiento</button>
+        <div className="groups-table-actions">
+          <DataViewControls view={travelView} onView={setTravelView} sort={travelSort} onSort={setTravelSort} options={[
+            {key:'from',label:'Origen'},{key:'to',label:'Destino'},{key:'minutes',label:'Tiempo'},
+          ]}/>
+          <button className="btn ghost-inline" disabled={buildings.length<2} onClick={()=>setModal('travel')}><Plus size={16}/> Añadir desplazamiento</button>
+        </div>
       </div>
       {travelExpanded&&<div className="study-collapsible-content">
         {project.buildingTravelTimes.length===0
           ? <div className="groups-empty"><Building2 size={28}/><strong>Sin desplazamientos configurados</strong><p>Añade tiempos cuando el centro tenga actividades en edificios diferentes.</p></div>
-          : <div className="groups-table-wrap"><table className="groups-table sortable-table">
+          : travelView==='table' ? <div className="groups-table-wrap"><table className="groups-table sortable-table">
             <thead><tr>
               <SortHeader label="Origen" sortKey="from" state={travelSort} onSort={key=>setTravelSort(nextSort(travelSort,key))}/>
               <SortHeader label="Destino" sortKey="to" state={travelSort} onSort={key=>setTravelSort(nextSort(travelSort,key))}/>
               <SortHeader label="Tiempo" sortKey="minutes" state={travelSort} onSort={key=>setTravelSort(nextSort(travelSort,key))}/>
             </tr></thead>
             <tbody>{sortedTravel.map((item,index)=><tr key={index}><td>{item.fromBuilding}</td><td>{item.toBuilding}</td><td>{item.minutes} min</td></tr>)}</tbody>
-          </table></div>}
+          </table></div> : <div className="data-card-grid">{sortedTravel.map((item,index)=><article className="data-record-card" key={index}>
+            <div className="data-record-card-heading"><div><strong>{item.fromBuilding} → {item.toBuilding}</strong><small>Desplazamiento entre edificios</small></div><span className="tag">{item.minutes} min</span></div>
+          </article>)}</div>}
       </div>}
     </section>
   </div>

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarRange, Plus, RefreshCcw, Trash2, UserRoundX } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
+import { DataViewControls, SortableTh, sortCollection, type DataView, type SortState } from '../components/DataCollectionView'
 import type { TemporaryChangeKind, TemporaryScheduleChange, ViyeuticaProject } from '../domain/project'
 import { operationalAudit, operationalScheduleForDate } from '../domain/temporaryOperations'
 import { saveProject } from '../store/projectStorage'
@@ -21,8 +22,17 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
   const [notes,setNotes]=useState('')
   const [previewDate,setPreviewDate]=useState(today)
   const [modalOpen,setModalOpen]=useState(false)
+  const [changesView,setChangesView]=useState<DataView>('table')
+  const [changesSort,setChangesSort]=useState<SortState<'kind'|'teacher'|'other'|'period'|'active'>>({key:null,direction:'asc'})
   const run=useMemo(()=>operationalScheduleForDate(project,previewDate),[project,previewDate])
   const audit=useMemo(()=>operationalAudit(project,previewDate),[project,previewDate])
+  const displayedChanges=sortCollection(project.temporaryChanges,changesSort,(change,key)=>{
+    if(key==='kind')return kindLabels[change.kind]
+    if(key==='teacher')return project.teachers.find(item=>item.id===change.teacherId)?.name??''
+    if(key==='other')return project.teachers.find(item=>item.id===(change.substituteTeacherId??change.swapTeacherId))?.name??''
+    if(key==='period')return change.startDate+' '+change.endDate
+    return change.active
+  })
 
   const resetForm=()=>{
     setKind('substitution')
@@ -101,13 +111,35 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
     <section className="groups-table-card">
       <div className="groups-table-heading">
         <div><span className="panel-kicker">Vigencia</span><h2>Cambios registrados</h2></div>
-        <button className="btn ghost-inline" disabled={!project.establishedScheduleRun} onClick={()=>setModalOpen(true)}><Plus size={16}/> Añadir cambio</button>
+        <div className="groups-table-actions">
+          <DataViewControls
+            view={changesView}
+            onView={setChangesView}
+            sort={changesSort}
+            onSort={setChangesSort}
+            options={[
+              {key:'kind',label:'Tipo'},
+              {key:'teacher',label:'Docente'},
+              {key:'other',label:'Sustituto / permuta'},
+              {key:'period',label:'Periodo'},
+              {key:'active',label:'Estado'},
+            ]}
+          />
+          <button className="btn ghost-inline" disabled={!project.establishedScheduleRun} onClick={()=>setModalOpen(true)}><Plus size={16}/> Añadir cambio</button>
+        </div>
       </div>
       {project.temporaryChanges.length===0
         ? <div className="groups-empty"><CalendarRange size={28}/><strong>No hay cambios temporales</strong><p>El horario operativo coincide con el horario establecido.</p></div>
-        : <div className="groups-table-wrap"><table className="groups-table">
-          <thead><tr><th>Tipo</th><th>Docente</th><th>Sustituto / permuta</th><th>Periodo</th><th>Estado</th><th/></tr></thead>
-          <tbody>{project.temporaryChanges.map(change=><tr key={change.id}>
+        : changesView==='table' ? <div className="groups-table-wrap"><table className="groups-table">
+          <thead><tr>
+            <SortableTh label="Tipo" sortKey="kind" state={changesSort} onSort={setChangesSort}/>
+            <SortableTh label="Docente" sortKey="teacher" state={changesSort} onSort={setChangesSort}/>
+            <SortableTh label="Sustituto / permuta" sortKey="other" state={changesSort} onSort={setChangesSort}/>
+            <SortableTh label="Periodo" sortKey="period" state={changesSort} onSort={setChangesSort}/>
+            <SortableTh label="Estado" sortKey="active" state={changesSort} onSort={setChangesSort}/>
+            <th/>
+          </tr></thead>
+          <tbody>{displayedChanges.map(change=><tr key={change.id}>
             <td>{kindLabels[change.kind]}</td>
             <td>{project.teachers.find(item=>item.id===change.teacherId)?.name??'—'}</td>
             <td>{project.teachers.find(item=>item.id===(change.substituteTeacherId??change.swapTeacherId))?.name??'—'}</td>
@@ -115,7 +147,16 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
             <td><button className={'status-toggle '+(change.active?'active':'')} onClick={()=>toggle(change.id)}>{change.active?'Activa':'Pausada'}</button></td>
             <td><button className="row-delete" title="Revertir/eliminar cambio" onClick={()=>remove(change.id)}><Trash2 size={15}/></button></td>
           </tr>)}</tbody>
-        </table></div>}
+        </table></div> : <div className="data-card-grid">
+          {displayedChanges.map(change=><article className={'data-record-card '+(!change.active?'is-inactive':'')} key={change.id}>
+            <div className="data-record-card-heading"><div><strong>{kindLabels[change.kind]}</strong><small>{project.teachers.find(item=>item.id===change.teacherId)?.name??'—'}</small></div><span className={'tag '+(change.active?'':'amber')}>{change.active?'Activa':'Pausada'}</span></div>
+            <div className="data-record-card-data">
+              <div><span>Sustituto / permuta</span><strong>{project.teachers.find(item=>item.id===(change.substituteTeacherId??change.swapTeacherId))?.name??'—'}</strong></div>
+              <div><span>Periodo</span><strong>{change.startDate} → {change.endDate}</strong></div>
+            </div>
+            <div className="data-record-card-footer"><button className={'status-toggle '+(change.active?'active':'')} onClick={()=>toggle(change.id)}>{change.active?'Activa':'Pausada'}</button><button className="row-delete" title="Revertir/eliminar cambio" onClick={()=>remove(change.id)}><Trash2 size={15}/></button></div>
+          </article>)}
+        </div>}
     </section>
 
     <section className="operational-preview-card">

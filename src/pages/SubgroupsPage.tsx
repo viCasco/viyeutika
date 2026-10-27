@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Layers3, Plus, Trash2 } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
+import { DataViewControls, SortableTh, sortCollection, type DataView, type SortState } from '../components/DataCollectionView'
 import type { SchoolSubgroup, ViyeuticaProject } from '../domain/project'
 import { saveProject } from '../store/projectStorage'
 
@@ -21,6 +22,15 @@ export function SubgroupsPage({
   const [participantKey,setParticipantKey]=useState('')
   const [error,setError]=useState('')
   const [modalOpen,setModalOpen]=useState(false)
+  const [subgroupsView,setSubgroupsView]=useState<DataView>('table')
+  const [subgroupsSort,setSubgroupsSort]=useState<SortState<'name'|'group'|'students'|'participants'>>({key:null,direction:'asc'})
+
+  const displayedSubgroups=sortCollection(project.subgroups,subgroupsSort,(subgroup,key)=>{
+    if(key==='name')return subgroup.name
+    if(key==='group')return project.groups.find(group=>group.id===subgroup.parentGroupId)?.name??''
+    if(key==='students')return subgroup.students??-1
+    return subgroup.participantKey
+  })
 
   const resetForm=()=>{
     setParentGroupId(project.groups.find(group=>group.active)?.id??'')
@@ -102,20 +112,49 @@ export function SubgroupsPage({
     <section className="groups-table-card">
       <div className="groups-table-heading">
         <div><span className="panel-kicker">Estructura</span><h2>Subgrupos configurados</h2></div>
-        <button className="btn ghost-inline" onClick={()=>setModalOpen(true)}><Plus size={16}/> Añadir subgrupo</button>
+        <div className="groups-table-actions">
+          <DataViewControls
+            view={subgroupsView}
+            onView={setSubgroupsView}
+            sort={subgroupsSort}
+            onSort={setSubgroupsSort}
+            options={[
+              {key:'name',label:'Subgrupo'},
+              {key:'group',label:'Grupo base'},
+              {key:'students',label:'Alumnado'},
+              {key:'participants',label:'Participantes'},
+            ]}
+          />
+          <button className="btn ghost-inline" onClick={()=>setModalOpen(true)}><Plus size={16}/> Añadir subgrupo</button>
+        </div>
       </div>
       {project.subgroups.length===0
         ? <div className="groups-empty"><Layers3 size={28}/><strong>No hay subgrupos</strong><p>Solo necesitas crearlos cuando exista un desdoble, optativa o agrupación simultánea.</p></div>
-        : <div className="groups-table-wrap"><table className="groups-table">
-          <thead><tr><th>Subgrupo</th><th>Grupo base</th><th>Alumnado</th><th>Participantes</th><th/></tr></thead>
-          <tbody>{project.subgroups.map(subgroup=><tr key={subgroup.id}>
+        : subgroupsView==='table' ? <div className="groups-table-wrap"><table className="groups-table">
+          <thead><tr>
+            <SortableTh label="Subgrupo" sortKey="name" state={subgroupsSort} onSort={setSubgroupsSort}/>
+            <SortableTh label="Grupo base" sortKey="group" state={subgroupsSort} onSort={setSubgroupsSort}/>
+            <SortableTh label="Alumnado" sortKey="students" state={subgroupsSort} onSort={setSubgroupsSort}/>
+            <SortableTh label="Participantes" sortKey="participants" state={subgroupsSort} onSort={setSubgroupsSort}/>
+            <th/>
+          </tr></thead>
+          <tbody>{displayedSubgroups.map(subgroup=><tr key={subgroup.id}>
             <td><strong>{subgroup.name}</strong></td>
             <td>{project.groups.find(group=>group.id===subgroup.parentGroupId)?.name??'Grupo eliminado'}</td>
             <td>{subgroup.students??'—'}</td>
             <td>{subgroup.participantKey}</td>
             <td><button className="row-delete" onClick={()=>remove(subgroup.id)}><Trash2 size={15}/></button></td>
           </tr>)}</tbody>
-        </table></div>}
+        </table></div> : <div className="data-card-grid">
+          {displayedSubgroups.map(subgroup=><article className="data-record-card" key={subgroup.id}>
+            <div className="data-record-card-heading"><div><strong>{subgroup.name}</strong><small>{project.groups.find(group=>group.id===subgroup.parentGroupId)?.name??'Grupo eliminado'}</small></div></div>
+            <div className="data-record-card-data">
+              <div><span>Alumnado</span><strong>{subgroup.students??'—'}</strong></div>
+              <div><span>Participantes</span><strong>{subgroup.participantKey}</strong></div>
+            </div>
+            <div className="data-record-card-footer"><span/><button className="row-delete" title="Eliminar" onClick={()=>remove(subgroup.id)}><Trash2 size={15}/></button></div>
+          </article>)}
+        </div>}
     </section>
 
     <section className="groups-table-card">

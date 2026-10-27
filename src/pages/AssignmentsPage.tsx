@@ -14,6 +14,7 @@ import {
 import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
+import { DataViewControls, SortableTh, sortCollection, type DataView, type SortState } from '../components/DataCollectionView'
 
 type AssignmentType=TeachingAssignment['assignmentType']
 type AvailabilityStatus=TeacherAvailability['status']
@@ -88,6 +89,8 @@ export function AssignmentsPage({
   const [assignmentsExpanded,setAssignmentsExpanded]=useState(false)
   const [assignmentGroupFilter,setAssignmentGroupFilter]=useState<'all'|string>('all')
   const [assignmentTeacherFilter,setAssignmentTeacherFilter]=useState<'all'|string>('all')
+  const [assignmentsView,setAssignmentsView]=useState<DataView>('table')
+  const [assignmentsSort,setAssignmentsSort]=useState<SortState<'group'|'subgroup'|'subject'|'teacher'|'space'|'type'|'sessions'|'minutes'|'source'|'active'>>({key:null,direction:'asc'})
   const [progressExpanded,setProgressExpanded]=useState(false)
   const [showOtherTeachers,setShowOtherTeachers]=useState(false)
   const [supportCandidateOrder,setSupportCandidateOrder]=useState<'margin'|'supports'>('margin')
@@ -124,6 +127,18 @@ export function AssignmentsPage({
     (assignmentGroupFilter==='all'||item.groupId===assignmentGroupFilter)&&
     (assignmentTeacherFilter==='all'||item.teacherId===assignmentTeacherFilter)
   )
+  const displayedAssignments=sortCollection(visibleAssignments,assignmentsSort,(assignment,key)=>{
+    if(key==='group')return project.groups.find(item=>item.id===assignment.groupId)?.name??''
+    if(key==='subgroup')return assignment.subgroupId?project.subgroups.find(item=>item.id===assignment.subgroupId)?.name??'':''
+    if(key==='subject')return project.subjects.find(item=>item.id===assignment.subjectId)?.name??''
+    if(key==='teacher')return project.teachers.find(item=>item.id===assignment.teacherId)?.name??''
+    if(key==='space')return assignment.spaceId?project.spaces.find(item=>item.id===assignment.spaceId)?.name??'':''
+    if(key==='type')return assignmentTypeLabels[assignment.assignmentType]
+    if(key==='sessions')return assignment.weeklySessions??-1
+    if(key==='minutes')return assignment.weeklyMinutes??-1
+    if(key==='source')return sourceLabel(assignment.source)
+    return assignment.active
+  })
   const availabilityGuide=!availabilityDraft.teacherIds.length?'Selecciona al menos un docente.'
     :!availabilityDraft.days.length?'Selecciona al menos un día.'
     :!availabilityDraft.sessions.length?'Selecciona al menos una sesión.'
@@ -1037,7 +1052,22 @@ export function AssignmentsPage({
           <span className="panel-kicker">Matriz docente</span>
           <h2>Asignaciones configuradas <span className="availability-count">{project.assignments.length}</span></h2>
         </div>
-        <div className="groups-table-actions assignments-matrix-actions"><button className="btn ghost-inline" onClick={()=>{setBulkSubjectId('');setBulkTeacherId('');setBulkModalOpen(true)}}><UsersRound size={16}/> Asignar materia a docente</button><button className="btn ghost-inline" onClick={openCreate}><Plus size={16}/> Añadir asignación</button></div>
+        <div className="groups-table-actions assignments-matrix-actions">
+          <DataViewControls
+            view={assignmentsView}
+            onView={setAssignmentsView}
+            sort={assignmentsSort}
+            onSort={setAssignmentsSort}
+            options={[
+              {key:'group',label:'Grupo'},{key:'subgroup',label:'Subgrupo'},{key:'subject',label:'Materia'},
+              {key:'teacher',label:'Docente'},{key:'space',label:'Espacio'},{key:'type',label:'Intervención'},
+              {key:'sessions',label:'Sesiones / semana'},{key:'minutes',label:'Minutos / semana'},
+              {key:'source',label:'Origen'},{key:'active',label:'Estado'},
+            ]}
+          />
+          <button className="btn ghost-inline" onClick={()=>{setBulkSubjectId('');setBulkTeacherId('');setBulkModalOpen(true)}}><UsersRound size={16}/> Asignar materia a docente</button>
+          <button className="btn ghost-inline" onClick={openCreate}><Plus size={16}/> Añadir asignación</button>
+        </div>
       </div>
 
       {assignmentsExpanded&&<div className="assignments-matrix-content">
@@ -1068,9 +1098,21 @@ export function AssignmentsPage({
           ? <div className="groups-empty"><UsersRound size={28}/><strong>No hay asignaciones todavía</strong><p>Asigna profesorado manualmente, importa el JSON anterior o completa los casos inequívocos.</p></div>
           : visibleAssignments.length===0
             ? <div className="groups-empty"><UsersRound size={28}/><strong>No hay asignaciones con estos filtros</strong><p>Cambia el grupo o docente seleccionado para mostrar resultados.</p></div>
-            : <div className="groups-table-wrap"><table className="groups-table assignments-table">
-          <thead><tr><th>Grupo</th><th>Subgrupo</th><th>Materia</th><th>Docente</th><th>Espacio</th><th>Intervención</th><th>Ses./sem.</th><th>Min/sem.</th><th>Origen</th><th>Estado</th><th/></tr></thead>
-          <tbody>{visibleAssignments.map(assignment=>{
+            : assignmentsView==='table' ? <div className="groups-table-wrap"><table className="groups-table assignments-table">
+          <thead><tr>
+            <SortableTh label="Grupo" sortKey="group" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Subgrupo" sortKey="subgroup" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Materia" sortKey="subject" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Docente" sortKey="teacher" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Espacio" sortKey="space" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Intervención" sortKey="type" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Ses./sem." sortKey="sessions" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Min/sem." sortKey="minutes" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Origen" sortKey="source" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <SortableTh label="Estado" sortKey="active" state={assignmentsSort} onSort={setAssignmentsSort}/>
+            <th/>
+          </tr></thead>
+          <tbody>{displayedAssignments.map(assignment=>{
             const group=project.groups.find(item=>item.id===assignment.groupId)
             const subject=project.subjects.find(item=>item.id===assignment.subjectId)
             const teacher=project.teachers.find(item=>item.id===assignment.teacherId)
@@ -1088,7 +1130,27 @@ export function AssignmentsPage({
               <td><div className="row-actions"><button title="Duplicar" onClick={()=>duplicate(assignment)}><Copy size={15}/></button><button title="Editar" onClick={()=>edit(assignment)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>remove(assignment.id)}><Trash2 size={15}/></button></div></td>
             </tr>
           })}</tbody>
-        </table></div>}
+        </table></div> : <div className="data-card-grid assignment-card-grid">
+          {displayedAssignments.map(assignment=>{
+            const group=project.groups.find(item=>item.id===assignment.groupId)
+            const subject=project.subjects.find(item=>item.id===assignment.subjectId)
+            const teacher=project.teachers.find(item=>item.id===assignment.teacherId)
+            const subgroup=assignment.subgroupId?project.subgroups.find(item=>item.id===assignment.subgroupId):null
+            const space=assignment.spaceId?project.spaces.find(item=>item.id===assignment.spaceId):null
+            return <article className={'data-record-card '+(!assignment.active?'is-inactive':'')} key={assignment.id}>
+              <div className="data-record-card-heading"><div><strong>{group?.name??'Grupo eliminado'} · {subject?.name??'Materia eliminada'}</strong><small>{teacher?.name??'Docente eliminado'}</small></div><span className="tag">{assignmentTypeLabels[assignment.assignmentType]}</span></div>
+              <div className="data-record-card-data">
+                <div><span>Subgrupo</span><strong>{subgroup?.name??'—'}</strong></div>
+                <div><span>Espacio</span><strong>{space?.name??'—'}</strong></div>
+                <div><span>Ses./sem.</span><strong>{assignment.weeklySessions??'—'}</strong></div>
+                <div><span>Min/sem.</span><strong>{assignment.weeklyMinutes??'—'}</strong></div>
+                <div><span>Origen</span><strong>{sourceLabel(assignment.source)}</strong></div>
+                <div><span>Estado</span><strong>{assignment.active?'Activa':'Inactiva'}</strong></div>
+              </div>
+              <div className="data-record-card-footer"><button className={'status-toggle '+(assignment.active?'active':'')} onClick={()=>toggleActive(assignment.id)}>{assignment.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Duplicar" onClick={()=>duplicate(assignment)}><Copy size={15}/></button><button title="Editar" onClick={()=>edit(assignment)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>remove(assignment.id)}><Trash2 size={15}/></button></div></div>
+            </article>
+          })}
+        </div>}
       </div>}
     </section>
 

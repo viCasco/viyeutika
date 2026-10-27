@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
-  BriefcaseBusiness, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, Clock3, GraduationCap, LayoutGrid, List, Pencil, Plus,
+  BriefcaseBusiness, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, Clock3, GraduationCap, Pencil, Plus,
   Trash2, UserRoundCog, Users,
 } from 'lucide-react'
 import type { GenerationRun, Teacher, TeacherDedication, TeacherDedicationType, ViyeuticaProject, Weekday } from '../domain/project'
@@ -9,6 +9,7 @@ import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
 import { OperationsPage } from './OperationsPage'
+import { DataViewControls, SortableTh, sortCollection, type DataView, type SortState } from '../components/DataCollectionView'
 
 type EmploymentType=Teacher['employmentType']
 type TeacherStatus=Teacher['status']
@@ -101,7 +102,8 @@ export function StaffPage({
   const [templateMessage,setTemplateMessage]=useState('')
   const [dedicationDraft,setDedicationDraft]=useState<DedicationDraft>(emptyDedication)
   const [modalOpen,setModalOpen]=useState(false)
-  const [staffView,setStaffView]=useState<'list'|'cards'>('list')
+  const [staffView,setStaffView]=useState<DataView>('table')
+  const [staffSort,setStaffSort]=useState<SortState<'name'|'status'|'employment'|'specialties'|'tutoring'|'dedications'|'load'|'active'>>({key:null,direction:'asc'})
   const [scheduleTeacherId,setScheduleTeacherId]=useState<string|null>(null)
   const [workspace,setWorkspace]=useState<'staff'|'substitutions'>(initialStaffWorkspace)
 
@@ -118,6 +120,16 @@ export function StaffPage({
     ?? validRuns.find(run=>run.id===project.selectedGenerationRunId)
     ?? validRuns[validRuns.length-1]
     ?? null
+  const sortedTeachers=sortCollection(teachers,staffSort,(teacher,key)=>{
+    if(key==='name')return teacher.name
+    if(key==='status')return teacher.status
+    if(key==='employment')return employmentLabels[teacher.employmentType]
+    if(key==='specialties')return teacher.specialties.join(', ')
+    if(key==='tutoring')return project.groups.filter(group=>group.tutorTeacherId===teacher.id).map(group=>group.name).join(', ')
+    if(key==='dedications')return (teacher.dedications??[]).map(item=>item.label).join(', ')
+    if(key==='load')return teacher.weeklyTeachingMinutes??-1
+    return teacher.active
+  })
   const activeTeachers=teachers.filter(teacher=>teacher.active)
   const confirmed=activeTeachers.filter(teacher=>teacher.status==='confirmed').length
   const pending=activeTeachers.filter(teacher=>teacher.status==='to_determine').length
@@ -465,34 +477,42 @@ export function StaffPage({
       <div className="groups-table-heading">
         <div><span className="panel-kicker">Plantilla del curso</span><h2>Profesorado</h2></div>
         <div className="staff-heading-actions">
-          <div className="staff-view-toggle" role="group" aria-label="Cambiar vista del profesorado">
-            <button
-              type="button"
-              className={staffView==='list'?'active':''}
-              title="Vista de lista"
-              aria-label="Vista de lista"
-              aria-pressed={staffView==='list'}
-              onClick={()=>setStaffView('list')}
-            ><List size={16}/></button>
-            <button
-              type="button"
-              className={staffView==='cards'?'active':''}
-              title="Vista de tarjetas"
-              aria-label="Vista de tarjetas"
-              aria-pressed={staffView==='cards'}
-              onClick={()=>setStaffView('cards')}
-            ><LayoutGrid size={16}/></button>
-          </div>
+          <DataViewControls
+            view={staffView}
+            onView={setStaffView}
+            sort={staffSort}
+            onSort={setStaffSort}
+            options={[
+              {key:'name',label:'Docente'},
+              {key:'status',label:'Estado de confirmación'},
+              {key:'employment',label:'Jornada'},
+              {key:'specialties',label:'Especialidades'},
+              {key:'tutoring',label:'Tutoría'},
+              {key:'dedications',label:'Dedicaciones'},
+              {key:'load',label:'Carga objetivo'},
+              {key:'active',label:'Activo / inactivo'},
+            ]}
+          />
           <button className="btn ghost-inline" onClick={openCreate}><Plus size={16}/> Añadir docente</button>
         </div>
       </div>
       {teachers.length===0
         ? <div className="groups-empty"><UserRoundCog size={28}/><strong>No hay docentes todavía</strong><p>Añádelos manualmente o importa el JSON del curso anterior.</p></div>
-        : staffView==='list'
+        : staffView==='table'
           ? <div className="groups-table-wrap">
               <table className="groups-table staff-table">
-                <thead><tr><th>Docente</th><th>Estado</th><th>Jornada</th><th>Especialidades</th><th>Tutoría</th><th>Dedicaciones</th><th>Carga objetivo</th><th>Estado</th><th/></tr></thead>
-                <tbody>{teachers.map(teacher=>{
+                <thead><tr>
+                  <SortableTh label="Docente" sortKey="name" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Estado" sortKey="status" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Jornada" sortKey="employment" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Especialidades" sortKey="specialties" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Tutoría" sortKey="tutoring" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Dedicaciones" sortKey="dedications" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Carga objetivo" sortKey="load" state={staffSort} onSort={setStaffSort}/>
+                  <SortableTh label="Estado" sortKey="active" state={staffSort} onSort={setStaffSort}/>
+                  <th/>
+                </tr></thead>
+                <tbody>{sortedTeachers.map(teacher=>{
                   const tutorGroups=project.groups.filter(group=>group.tutorTeacherId===teacher.id)
                   const dedications=teacher.dedications??[]
                   return <tr key={teacher.id} className={!teacher.active?'is-inactive':''}>
@@ -510,7 +530,7 @@ export function StaffPage({
               </table>
             </div>
           : <div className="staff-card-grid">
-              {teachers.map(teacher=>{
+              {sortedTeachers.map(teacher=>{
                 const tutorGroups=project.groups.filter(group=>group.tutorTeacherId===teacher.id)
                 const dedications=teacher.dedications??[]
                 return <article className={'staff-card '+(!teacher.active?'is-inactive':'')} key={teacher.id}>

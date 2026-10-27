@@ -15,6 +15,7 @@ import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
 import { SubgroupsPage } from './SubgroupsPage'
+import { DataViewControls, SortableTh, sortCollection, type DataView, type SortState } from '../components/DataCollectionView'
 
 interface GroupDraft {
   stage: EducationStage | ''
@@ -64,6 +65,8 @@ export function GroupsPage({
   const [error,setError] = useState('')
   const [stageFilter,setStageFilter] = useState<'all'|EducationStage>('all')
   const [modalOpen,setModalOpen] = useState(false)
+  const [groupsView,setGroupsView]=useState<DataView>('table')
+  const [groupsSort,setGroupsSort]=useState<SortState<'name'|'stage'|'level'|'students'|'classroom'|'type'|'active'>>({key:null,direction:'asc'})
   const [workspace,setWorkspace]=useState<'groups'|'subgroups'>(initialGroupsWorkspace)
 
   const switchWorkspace=(next:'groups'|'subgroups')=>{
@@ -77,6 +80,15 @@ export function GroupsPage({
   const levels = draft.stage ? EDUCATION_LEVELS[draft.stage] : []
   const activeGroups = groups.filter(group => group.active)
   const visibleGroups = groups.filter(group => stageFilter==='all'||group.stage===stageFilter)
+  const displayedGroups=sortCollection(visibleGroups,groupsSort,(group,key)=>{
+    if(key==='name')return group.name
+    if(key==='stage')return group.stage
+    if(key==='level')return group.level
+    if(key==='students')return group.students??-1
+    if(key==='classroom')return group.classroom
+    if(key==='type')return group.combined?'Combinado':'Ordinario'
+    return group.active
+  })
   const studentTotal = activeGroups.reduce((sum,group) => sum + (group.students ?? 0),0)
   const levelTotal = new Set(activeGroups.map(group => `${group.stage}|${group.level}`)).size
   const complete = isStructureComplete(project)
@@ -266,7 +278,24 @@ export function GroupsPage({
     <section className="groups-table-card">
       <div className="groups-table-heading">
         <div><span className="panel-kicker">Unidades del curso</span><h2>Grupos creados</h2></div>
-        <button className="btn ghost-inline" onClick={openCreate}><Plus size={16}/> Añadir grupo</button>
+        <div className="groups-table-actions">
+          <DataViewControls
+            view={groupsView}
+            onView={setGroupsView}
+            sort={groupsSort}
+            onSort={setGroupsSort}
+            options={[
+              {key:'name',label:'Grupo'},
+              {key:'stage',label:'Etapa'},
+              {key:'level',label:'Nivel'},
+              {key:'students',label:'Alumnos'},
+              {key:'classroom',label:'Aula'},
+              {key:'type',label:'Tipo'},
+              {key:'active',label:'Estado'},
+            ]}
+          />
+          <button className="btn ghost-inline" onClick={openCreate}><Plus size={16}/> Añadir grupo</button>
+        </div>
       </div>
       {groups.length>0&&<div className="list-filter-tags" aria-label="Filtrar grupos por etapa">
         <button type="button" className={stageFilter==='all'?'active':''} onClick={()=>setStageFilter('all')}>Todos</button>
@@ -276,10 +305,19 @@ export function GroupsPage({
         <LayoutGrid size={28}/><strong>No hay grupos todavía</strong><p>Añade el primero manualmente o genera la estructura estándar.</p>
       </div> : visibleGroups.length===0 ? <div className="groups-empty">
         <LayoutGrid size={28}/><strong>No hay grupos para esta etapa</strong><p>Cambia el filtro o crea un grupo nuevo.</p>
-      </div> : <div className="groups-table-wrap">
+      </div> : groupsView==='table' ? <div className="groups-table-wrap">
         <table className="groups-table">
-          <thead><tr><th>Grupo</th><th>Etapa</th><th>Nivel</th><th>Alumnos</th><th>Aula</th><th>Tipo</th><th>Estado</th><th/></tr></thead>
-          <tbody>{visibleGroups.map(group => <tr key={group.id} className={!group.active?'is-inactive':''}>
+          <thead><tr>
+            <SortableTh label="Grupo" sortKey="name" state={groupsSort} onSort={setGroupsSort}/>
+            <SortableTh label="Etapa" sortKey="stage" state={groupsSort} onSort={setGroupsSort}/>
+            <SortableTh label="Nivel" sortKey="level" state={groupsSort} onSort={setGroupsSort}/>
+            <SortableTh label="Alumnos" sortKey="students" state={groupsSort} onSort={setGroupsSort}/>
+            <SortableTh label="Aula" sortKey="classroom" state={groupsSort} onSort={setGroupsSort}/>
+            <SortableTh label="Tipo" sortKey="type" state={groupsSort} onSort={setGroupsSort}/>
+            <SortableTh label="Estado" sortKey="active" state={groupsSort} onSort={setGroupsSort}/>
+            <th/>
+          </tr></thead>
+          <tbody>{displayedGroups.map(group => <tr key={group.id} className={!group.active?'is-inactive':''}>
             <td><strong>{group.name}</strong></td>
             <td>{group.stage}</td>
             <td>{group.level}</td>
@@ -290,6 +328,16 @@ export function GroupsPage({
             <td><div className="row-actions"><button title="Editar" onClick={() => edit(group)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={() => remove(group.id)}><Trash2 size={15}/></button></div></td>
           </tr>)}</tbody>
         </table>
+      </div> : <div className="data-card-grid">
+        {displayedGroups.map(group=><article className={'data-record-card '+(!group.active?'is-inactive':'')} key={group.id}>
+          <div className="data-record-card-heading"><div><strong>{group.name}</strong><small>{group.stage} · {group.level}</small></div>{group.combined?<span className="tag amber">Combinado</span>:<span className="tag">Ordinario</span>}</div>
+          <div className="data-record-card-data">
+            <div><span>Alumnos</span><strong>{group.students??'—'}</strong></div>
+            <div><span>Aula</span><strong>{group.classroom||'—'}</strong></div>
+            <div><span>Estado</span><strong>{group.active?'Activo':'Inactivo'}</strong></div>
+          </div>
+          <div className="data-record-card-footer"><button className={'status-toggle '+(group.active?'active':'')} onClick={()=>toggleActive(group.id)}>{group.active?'Activo':'Inactivo'}</button><div className="row-actions"><button title="Editar" onClick={()=>edit(group)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>remove(group.id)}><Trash2 size={15}/></button></div></div>
+        </article>)}
       </div>}
     </section>
 
