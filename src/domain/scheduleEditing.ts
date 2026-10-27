@@ -24,6 +24,7 @@ export interface ScheduleEditResult {
 export interface ScheduleMovePreview {
   allowed:boolean
   message:string
+  kind:'move'|'swap'|'same'|'blocked'
 }
 
 type ScheduleChangeValidation =
@@ -160,6 +161,12 @@ function prepareSwap(
   if(sourceAssignment.groupId!==current.groupId||targetAssignment.groupId!==current.groupId){
     return {ok:false,run,message:'Movimiento rechazado: el intercambio solo puede realizarse entre sesiones del mismo grupo.'}
   }
+  if(
+    sourceAssignment.subjectId===targetAssignment.subjectId&&
+    sourceAssignment.teacherId===targetAssignment.teacherId
+  ){
+    return {ok:false,run,message:'Movimiento rechazado: ambas sesiones corresponden a la misma materia y docente; intercambiarlas no produciría ningún cambio.'}
+  }
 
   const sourceMatchingLock=(project.scheduleLocks??[]).find(lock=>
     lock.assignmentId===current.assignmentId&&lock.day===current.day&&lock.sessionId===current.sessionId
@@ -243,15 +250,38 @@ export function previewScheduleEntryChange(
   run:GenerationRun,
   change:ScheduleEntryChange,
 ):ScheduleMovePreview{
+  const current=run.entries.find(entry=>entry.id===change.entryId)
+  const sourceAssignment=project.assignments.find(item=>item.id===change.assignmentId&&item.active)
+  const targetEntries=current?run.entries.filter(entry=>
+    entry.id!==current.id&&
+    entry.groupId===current.groupId&&
+    entry.day===change.day&&
+    entry.sessionId===change.sessionId
+  ):[]
+  if(current&&sourceAssignment&&targetEntries.length===1){
+    const targetAssignment=project.assignments.find(item=>item.id===targetEntries[0].assignmentId&&item.active)
+    if(
+      targetAssignment&&
+      sourceAssignment.subjectId===targetAssignment.subjectId&&
+      sourceAssignment.teacherId===targetAssignment.teacherId
+    ){
+      return {
+        allowed:false,
+        message:'Misma materia y docente: el intercambio no produciría ningún cambio.',
+        kind:'same',
+      }
+    }
+  }
+
   const swap=prepareSwap(project,run,change)
   if(swap)return swap.ok
-    ? {allowed:true,message:'Intercambio compatible.'}
-    : {allowed:false,message:swap.message.replace(/^Movimiento rechazado:\s*/,'')}
+    ? {allowed:true,message:'Intercambio compatible.',kind:'swap'}
+    : {allowed:false,message:swap.message.replace(/^Movimiento rechazado:\s*/,''),kind:'blocked'}
 
   const validation=validateSimpleMove(project,run,change)
   return validation.ok
-    ? {allowed:true,message:'Movimiento disponible.'}
-    : {allowed:false,message:validation.message}
+    ? {allowed:true,message:'Movimiento disponible.',kind:'move'}
+    : {allowed:false,message:validation.message,kind:'blocked'}
 }
 
 export function prepareScheduleEntryChange(
