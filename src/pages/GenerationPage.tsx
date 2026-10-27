@@ -148,6 +148,29 @@ export function GenerationPage({
     setEditError('')
   }
 
+  const locksForEditedRun=(before:GenerationRun,after:GenerationRun)=>{
+    return (project.scheduleLocks??[]).map(lock=>{
+      if(lock.mode!=='teacher')return lock
+      const beforeEntry=before.entries.find(entry=>
+        entry.assignmentId===lock.assignmentId&&
+        entry.teacherId===lock.teacherId&&
+        entry.day===lock.day&&
+        entry.sessionId===lock.sessionId
+      )
+      if(!beforeEntry)return lock
+      const afterEntry=after.entries.find(entry=>entry.id===beforeEntry.id)
+      if(!afterEntry)return lock
+      if(afterEntry.day===beforeEntry.day&&afterEntry.sessionId===beforeEntry.sessionId&&afterEntry.assignmentId===beforeEntry.assignmentId)return lock
+      return {
+        ...lock,
+        assignmentId:afterEntry.assignmentId,
+        teacherId:afterEntry.teacherId,
+        day:afterEntry.day,
+        sessionId:afterEntry.sessionId,
+      }
+    })
+  }
+
   const persistEditedRun=(edited:GenerationRun,nextLocks=project.scheduleLocks??[])=>{
     if(!selectedRun)return
     const snapshot=saveGenerationUndo(project,'Edición manual del horario')
@@ -202,20 +225,7 @@ export function GenerationPage({
       setEditError(result.message)
       return
     }
-    const current=selectedRun.entries.find(entry=>entry.id===editEntryId)
-    const editedEntry=result.run.entries.find(entry=>entry.id===editEntryId)
-    const nextLocks=(project.scheduleLocks??[]).map(lock=>{
-      if(!current||!editedEntry)return lock
-      if(lock.assignmentId!==current.assignmentId||lock.day!==current.day||lock.sessionId!==current.sessionId)return lock
-      if(lock.mode==='full')return lock
-      return {
-        ...lock,
-        assignmentId:editedEntry.assignmentId,
-        teacherId:editedEntry.teacherId,
-        day:editedEntry.day,
-        sessionId:editedEntry.sessionId,
-      }
-    })
+    const nextLocks=locksForEditedRun(selectedRun,result.run)
     persistEditedRun(result.run,nextLocks)
     setEditEntryId('')
     setEditError('')
@@ -235,11 +245,7 @@ export function GenerationPage({
       setGenerationNotice(result.message)
       return
     }
-    const nextLocks=(project.scheduleLocks??[]).map(lock=>{
-      if(lock.assignmentId!==current.assignmentId||lock.day!==current.day||lock.sessionId!==current.sessionId)return lock
-      if(lock.mode!=='teacher')return lock
-      return {...lock,day,sessionId}
-    })
+    const nextLocks=locksForEditedRun(selectedRun,result.run)
     persistEditedRun(result.run,nextLocks)
     setDragEntryId('')
   }
@@ -900,15 +906,29 @@ export function GenerationPage({
         </div>
         {editEntry&&<div className="schedule-destination-map">
           <div className="schedule-destination-legend"><strong>Destinos</strong><span className="compatible">Compatible</span><span className="soft">SOFT</span><span className="occupied">Ocupado / conflicto</span><span className="hard">No disponible HARD</span></div>
-          <div className="schedule-destination-grid">
-            {project.schedule.activeDays.flatMap(day=>teachingBlocks.map(block=>{
-              const rawState=scheduleCellState(project,project.draftScheduleRun?.id===selectedRun.id?project.draftScheduleRun:selectedRun,project.assignments.find(item=>item.id===editAssignmentId)?.teacherId??editEntry.teacherId,day,block.id)
-              const probe=prepareScheduleEntryChange(project,selectedRun,{entryId:editEntry.id,assignmentId:editAssignmentId,day,sessionId:block.id})
-              const state=probe.ok?(rawState==='soft'?'soft':'compatible'):(rawState==='hard'?'hard':'occupied')
-              return <button type="button" key={day+'-'+block.id} className={'destination-cell '+state+(editDay===day&&editSessionId===block.id?' selected':'')} onClick={()=>{if(probe.ok){setEditDay(day);setEditSessionId(block.id)}else setEditError(probe.message)}} disabled={state==='hard'}>
-                <strong>{dayLabels[day]}</strong><small>{block.label}</small>
-              </button>
-            }))}
+          <div className="schedule-destination-grid" style={{'--destination-days':project.schedule.activeDays.length} as React.CSSProperties}>
+            <div className="destination-corner">Sesión</div>
+            {project.schedule.activeDays.map(day=><div className="destination-day-heading" key={'head-'+day}>{dayLabels[day]}</div>)}
+            {teachingBlocks.flatMap(block=>[
+              <div className="destination-session-heading" key={'session-'+block.id}><strong>{block.label}</strong><small>{block.start}–{block.end}</small></div>,
+              ...project.schedule.activeDays.map(day=>{
+                const rawState=scheduleCellState(project,project.draftScheduleRun?.id===selectedRun.id?project.draftScheduleRun:selectedRun,project.assignments.find(item=>item.id===editAssignmentId)?.teacherId??editEntry.teacherId,day,block.id)
+                const probe=prepareScheduleEntryChange(project,selectedRun,{entryId:editEntry.id,assignmentId:editAssignmentId,day,sessionId:block.id})
+                const state=probe.ok?(rawState==='soft'?'soft':'compatible'):(rawState==='hard'?'hard':'occupied')
+                const isSwap=probe.ok&&selectedRun.entries.some(entry=>entry.id!==editEntry.id&&entry.groupId===editEntry.groupId&&entry.day===day&&entry.sessionId===block.id)
+                return <button
+                  type="button"
+                  key={day+'-'+block.id}
+                  className={'destination-cell '+state+(isSwap?' swap':'')+(editDay===day&&editSessionId===block.id?' selected':'')}
+                  title={probe.ok?(isSwap?'Intercambio compatible':probe.message):probe.message}
+                  onClick={()=>{if(probe.ok){setEditDay(day);setEditSessionId(block.id);setEditError('')}else setEditError(probe.message)}}
+                  disabled={state==='hard'}
+                >
+                  <strong>{isSwap?'↔':'·'}</strong>
+                  <small>{isSwap?'Intercambio':'Disponible'}</small>
+                </button>
+              })
+            ])}
           </div>
         </div>}
         <div className="schedule-edit-safety"><CheckCircle2 size={17}/><span>El cambio solo se guardará si supera disponibilidad, solapes, carga, reglas HARD y auditoría completa.</span></div>
