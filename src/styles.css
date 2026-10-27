@@ -239,9 +239,8 @@ button.wizard-step.done{cursor:pointer;background:#f6fbf2;border-color:#b7daa0}
 button.wizard-step.done:hover{transform:translateY(-1px);border-color:#a7d38b}
 button.wizard-step.active{cursor:default}
 button.wizard-step.done.active{
-  background:#edf8e6;
+  background:#a8cf98;
   border-color:#69a93c;
-  box-shadow:0 0 0 3px rgba(89,180,17,.16),inset 0 0 0 1px rgba(89,180,17,.18);
 }
 button.wizard-step.done.active .wizard-step-icon{
   background:#3f861d;
