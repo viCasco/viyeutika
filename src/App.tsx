@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  Building2, CalendarRange, FileInput, FileSearch, Gauge, GraduationCap, Layers3, LayoutGrid, Menu, PanelLeftClose,
+  Building2, FileInput, FileSearch, Gauge, GraduationCap, Layers3, LayoutGrid, Menu, PanelLeftClose,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
@@ -22,7 +22,6 @@ import { PrevalidationPage } from './pages/PrevalidationPage'
 import { GenerationPage } from './pages/GenerationPage'
 import { SubgroupsPage } from './pages/SubgroupsPage'
 import { SpacesPage } from './pages/SpacesPage'
-import { OperationsPage } from './pages/OperationsPage'
 import { useProject } from './hooks/useProject'
 import { useTheme } from './hooks/useTheme'
 
@@ -33,7 +32,6 @@ const navigation = [
   { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
   { path: '/subgrupos', label: 'Subgrupos y desdobles', icon: Layers3 },
   { path: '/espacios', label: 'Espacios y edificios', icon: Building2 },
-  { path: '/operaciones', label: 'Sustituciones', icon: CalendarRange },
   { path: '/centro', label: 'Centro', icon: GraduationCap },
   { path: '/grupos', label: 'Estructura y grupos', icon: LayoutGrid },
   { path: '/jornada', label: 'Jornada y sesiones', icon: CalendarClock },
@@ -51,7 +49,6 @@ const descriptions: Record<string,string> = {
   '/proyecto-json': 'Importación de plantillas y exportación de horarios, informes y respaldos.',
   '/subgrupos': 'Desdobles, optativas y simultaneidad compatible dentro de grupos base.',
   '/espacios': 'Aulas, instalaciones, edificios, disponibilidad y desplazamientos.',
-  '/operaciones': 'Ausencias, sustituciones, permutas y horario operativo por fecha.',
   '/profesorado': 'Plantilla docente, especialidades, jornadas, cargos y reducciones.',
   '/asignaciones': 'Relación entre grupos, materias, profesorado y responsabilidades docentes.',
   '/reglas': 'Restricciones legales, reglas del centro y preferencias ponderadas.',
@@ -67,6 +64,7 @@ const getRoute = () => {
   if(path==='/generacion')return '/horarios'
   if(path==='/exportaciones'||path==='/edicion-masiva')return '/proyecto-json'
   if(path==='/publicacion')return '/horarios'
+  if(path==='/operaciones')return '/profesorado'
   return path
 }
 
@@ -102,7 +100,6 @@ export default function App() {
     if (route === '/proyecto-json') return <ProjectImportPage project={project} navigate={go}/>
     if (route === '/subgrupos') return <SubgroupsPage project={project} navigate={go}/>
     if (route === '/espacios') return <SpacesPage project={project} navigate={go}/>
-    if (route === '/operaciones') return <OperationsPage project={project}/>
     if (route === '/profesorado') return <StaffPage project={project} navigate={go}/>
     if (route === '/asignaciones') return <AssignmentsPage project={project} navigate={go}/>
     if (route === '/reglas') return <RulesPage project={project} navigate={go}/>

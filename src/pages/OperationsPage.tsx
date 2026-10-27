@@ -11,7 +11,7 @@ const kindLabels:Record<TemporaryChangeKind,string>={
   swap:'Permuta',
 }
 
-export function OperationsPage({project}:{project:ViyeuticaProject}){
+export function OperationsPage({project,embedded=false}:{project:ViyeuticaProject;embedded?:boolean}){
   const today=new Date().toISOString().slice(0,10)
   const [kind,setKind]=useState<TemporaryChangeKind>('substitution')
   const [teacherId,setTeacherId]=useState(project.teachers.find(item=>item.active)?.id??'')
@@ -68,13 +68,13 @@ export function OperationsPage({project}:{project:ViyeuticaProject}){
     },{intent:'replace_project'})
   }
 
-  return <div className="wizard-page operations-page">
-    <section className="wizard-intro">
+  return <div className={embedded?'operations-page embedded':'wizard-page operations-page'}>
+    {!embedded&&<section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><CalendarRange size={28}/> Sustituciones y explotación</h1>
         <p>Aplica cambios temporales sobre una copia operativa del horario establecido. El horario oficial de referencia nunca se sobrescribe y vuelve a aplicarse automáticamente fuera del periodo de vigencia.</p>
       </div>
-    </section>
+    </section>}
 
     {!project.establishedScheduleRun&&<section className="empty-state-card"><UserRoundX size={32}/><h2>Necesitas un horario establecido</h2><p>Guarda primero una propuesta válida como horario del curso para utilizarla como referencia operativa.</p></section>}
 

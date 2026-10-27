@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import {
-  BriefcaseBusiness, CalendarDays, CheckCircle2, ChevronDown, Clock3, GraduationCap, LayoutGrid, List, Pencil, Plus,
+  BriefcaseBusiness, CalendarDays, CalendarRange, CheckCircle2, ChevronDown, Clock3, GraduationCap, LayoutGrid, List, Pencil, Plus,
   Trash2, UserRoundCog, Users,
 } from 'lucide-react'
 import type { GenerationRun, Teacher, TeacherDedication, TeacherDedicationType, ViyeuticaProject, Weekday } from '../domain/project'
@@ -8,6 +8,7 @@ import { isGenerationProposalValid, isStudyPlanComplete, uniqueGenerationRuns, v
 import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
+import { OperationsPage } from './OperationsPage'
 
 type EmploymentType=Teacher['employmentType']
 type TeacherStatus=Teacher['status']
@@ -79,6 +80,14 @@ function parseList(value:string){
   return value.split(',').map(item=>item.trim()).filter(Boolean)
 }
 
+function initialStaffWorkspace(){
+  const raw=window.location.hash.replace(/^#/,'')
+  const [path,query='']=raw.split('?')
+  if(path==='/operaciones')return 'substitutions' as const
+  const params=new URLSearchParams(query)
+  return params.get('tab')==='sustituciones'?'substitutions' as const:'staff' as const
+}
+
 export function StaffPage({
   project,
   navigate,
@@ -94,6 +103,13 @@ export function StaffPage({
   const [modalOpen,setModalOpen]=useState(false)
   const [staffView,setStaffView]=useState<'list'|'cards'>('list')
   const [scheduleTeacherId,setScheduleTeacherId]=useState<string|null>(null)
+  const [workspace,setWorkspace]=useState<'staff'|'substitutions'>(initialStaffWorkspace)
+
+  const switchWorkspace=(next:'staff'|'substitutions')=>{
+    setWorkspace(next)
+    const suffix=next==='substitutions'?'?tab=sustituciones':''
+    window.history.replaceState(null,'',`#/profesorado${suffix}`)
+  }
 
   const teachers=project.teachers
   const validRuns=uniqueGenerationRuns(project.generationRuns).filter(run=>isGenerationProposalValid(project,run))
@@ -289,6 +305,12 @@ export function StaffPage({
 
     <WizardStepper currentStep={5} project={project} navigate={navigate}/>
 
+    <section className="import-export-workspace-tabs" aria-label="Profesorado o sustituciones">
+      <button type="button" className={workspace==='staff'?'active':''} onClick={()=>switchWorkspace('staff')}><Users size={16}/> Profesorado</button>
+      <button type="button" className={workspace==='substitutions'?'active':''} onClick={()=>switchWorkspace('substitutions')}><CalendarRange size={16}/> Sustituciones</button>
+    </section>
+
+    {workspace==='staff'?<>
     <section className="structure-summary">
       <Summary label="Docentes activos" value={String(activeTeachers.length)} detail="plantilla del curso"/>
       <Summary label="Confirmados" value={String(confirmed)} detail="nombre conocido"/>
@@ -547,6 +569,7 @@ export function StaffPage({
       <article className="panel compact-info-panel"><Clock3 size={22}/><div><strong>Carga lectiva</strong><p>El valor manual es el objetivo o máximo. La carga realmente asignada se calculará después a partir de Asignaciones y del horario generado.</p></div></article>
       <article className="panel compact-info-panel"><GraduationCap size={22}/><div><strong>Tutorías vinculadas</strong><p>La tutoría se guarda directamente en cada grupo. Un grupo ya tutorado por otro docente queda bloqueado en el selector.</p></div></article>
     </section>
+    </>:<OperationsPage project={project} embedded/>}
   </div>
 }
 
