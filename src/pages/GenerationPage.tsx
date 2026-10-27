@@ -916,6 +916,7 @@ export function GenerationPage({
                 const probe=prepareScheduleEntryChange(project,selectedRun,{entryId:editEntry.id,assignmentId:editAssignmentId,day,sessionId:block.id})
                 const state=probe.ok?(rawState==='soft'?'soft':'compatible'):(rawState==='hard'?'hard':'occupied')
                 const isSwap=probe.ok&&selectedRun.entries.some(entry=>entry.id!==editEntry.id&&entry.groupId===editEntry.groupId&&entry.day===day&&entry.sessionId===block.id)
+                const destinationLabel=isSwap?'Intercambio':probe.ok?(state==='soft'?'SOFT':'Disponible'):state==='hard'?'HARD':'Conflicto'
                 return <button
                   type="button"
                   key={day+'-'+block.id}
@@ -924,8 +925,8 @@ export function GenerationPage({
                   onClick={()=>{if(probe.ok){setEditDay(day);setEditSessionId(block.id);setEditError('')}else setEditError(probe.message)}}
                   disabled={state==='hard'}
                 >
-                  <strong>{isSwap?'↔':'·'}</strong>
-                  <small>{isSwap?'Intercambio':'Disponible'}</small>
+                  <strong>{isSwap?'↔':probe.ok?'✓':'×'}</strong>
+                  <small>{destinationLabel}</small>
                 </button>
               })
             ])}
