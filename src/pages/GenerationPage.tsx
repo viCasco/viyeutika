@@ -905,7 +905,7 @@ export function GenerationPage({
           </button>
         </div>
         {editEntry&&<div className="schedule-destination-map">
-          <div className="schedule-destination-legend"><strong>Destinos</strong><span className="compatible">Compatible</span><span className="soft">SOFT</span><span className="occupied">Ocupado / conflicto</span><span className="hard">No disponible HARD</span></div>
+          <div className="schedule-destination-legend"><strong>Destinos</strong><span className="current">Origen / sin cambio</span><span className="compatible">Cambio posible</span><span className="soft">SOFT</span><span className="occupied">Conflicto</span><span className="hard">No disponible HARD</span></div>
           <div className="schedule-destination-grid" style={{'--destination-days':project.schedule.activeDays.length} as React.CSSProperties}>
             <div className="destination-corner">Sesión</div>
             {project.schedule.activeDays.map(day=><div className="destination-day-heading" key={'head-'+day}>{dayLabels[day]}</div>)}
@@ -913,19 +913,25 @@ export function GenerationPage({
               <div className="destination-session-heading" key={'session-'+block.id}><strong>{block.label}</strong><small>{block.start}–{block.end}</small></div>,
               ...project.schedule.activeDays.map(day=>{
                 const rawState=scheduleCellState(project,project.draftScheduleRun?.id===selectedRun.id?project.draftScheduleRun:selectedRun,project.assignments.find(item=>item.id===editAssignmentId)?.teacherId??editEntry.teacherId,day,block.id)
-                const probe=prepareScheduleEntryChange(project,selectedRun,{entryId:editEntry.id,assignmentId:editAssignmentId,day,sessionId:block.id})
-                const state=probe.ok?(rawState==='soft'?'soft':'compatible'):(rawState==='hard'?'hard':'occupied')
-                const isSwap=probe.ok&&selectedRun.entries.some(entry=>entry.id!==editEntry.id&&entry.groupId===editEntry.groupId&&entry.day===day&&entry.sessionId===block.id)
-                const destinationLabel=isSwap?'Intercambio':probe.ok?(state==='soft'?'SOFT':'Disponible'):state==='hard'?'HARD':'Conflicto'
+                const preview=previewScheduleEntryChange(project,selectedRun,{entryId:editEntry.id,assignmentId:editAssignmentId,day,sessionId:block.id})
+                const isOrigin=editEntry.day===day&&editEntry.sessionId===block.id&&editAssignmentId===editEntry.assignmentId
+                const state=isOrigin||preview.kind==='same'
+                  ? 'current'
+                  : preview.allowed
+                    ? (rawState==='soft'?'soft':'compatible')
+                    : (rawState==='hard'?'hard':'occupied')
+                const isSwap=preview.kind==='swap'
+                const destinationLabel=isOrigin?'Disponible':preview.kind==='same'?'Sin cambio':isSwap?'Intercambio':preview.allowed?(state==='soft'?'SOFT':'Cambio posible'):state==='hard'?'HARD':'Conflicto'
+                const disabled=isOrigin||preview.kind==='same'||!preview.allowed
                 return <button
                   type="button"
                   key={day+'-'+block.id}
                   className={'destination-cell '+state+(isSwap?' swap':'')+(editDay===day&&editSessionId===block.id?' selected':'')}
-                  title={probe.ok?(isSwap?'Intercambio compatible':probe.message):probe.message}
-                  onClick={()=>{if(probe.ok){setEditDay(day);setEditSessionId(block.id);setEditError('')}else setEditError(probe.message)}}
-                  disabled={state==='hard'}
+                  title={isOrigin?'Posición actual':preview.message}
+                  onClick={()=>{if(!disabled){setEditDay(day);setEditSessionId(block.id);setEditError('')}else if(!isOrigin)setEditError(preview.message)}}
+                  disabled={disabled}
                 >
-                  <strong>{isSwap?'↔':probe.ok?'✓':'×'}</strong>
+                  <strong>{isOrigin?'●':preview.kind==='same'?'=':isSwap?'↔':preview.allowed?'✓':'×'}</strong>
                   <small>{destinationLabel}</small>
                 </button>
               })
@@ -1029,7 +1035,7 @@ function SchedulePreview({
                       sessionId:block.id,
                     })
                   : null
-                const state=isOrigin?'origin':preview?.allowed?'valid':preview?'invalid':'idle'
+                const state=isOrigin?'origin':preview?.kind==='same'?'same':preview?.allowed?'valid':preview?'invalid':'idle'
                 const canDrop=state==='valid'
                 const dropProps={
                   onDragOver:(event:React.DragEvent<HTMLTableCellElement>)=>{
@@ -1047,12 +1053,12 @@ function SchedulePreview({
                   ? ' schedule-drop-valid'
                   : state==='invalid'
                     ? ' schedule-drop-invalid'
-                    : state==='origin'
+                    : state==='origin'||state==='same'
                       ? ' schedule-drop-origin'
                       : ''
                 const title=state==='valid'
-                  ? 'Destino disponible'
-                  : state==='invalid'
+                  ? (preview?.kind==='swap'?'Intercambio compatible':'Destino disponible')
+                  : state==='invalid'||state==='same'
                     ? preview?.message
                     : state==='origin'
                       ? 'Posición actual'
