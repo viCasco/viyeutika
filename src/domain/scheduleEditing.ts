@@ -21,22 +21,36 @@ export interface ScheduleEditResult {
   message:string
 }
 
+export interface ScheduleMovePreview {
+  allowed:boolean
+  message:string
+}
+
+type ScheduleChangeValidation =
+  | {ok:false;message:string}
+  | {
+      ok:true
+      current:GeneratedScheduleEntry
+      assignment:TeachingAssignment
+      slot:ReturnType<typeof teachingValidationSlots>[number]
+    }
+
 function cloneRun(run:GenerationRun):GenerationRun{
   return structuredClone(run)
 }
 
-export function prepareScheduleEntryChange(
+function validateScheduleEntryChange(
   project:ViyeuticaProject,
   run:GenerationRun,
   change:ScheduleEntryChange,
-):ScheduleEditResult{
+):ScheduleChangeValidation{
   const current=run.entries.find(entry=>entry.id===change.entryId)
   const assignment=project.assignments.find(item=>item.id===change.assignmentId&&item.active)
   const slot=teachingValidationSlots(project).find(item=>item.day===change.day&&item.sessionId===change.sessionId)
 
-  if(!current)return {ok:false,run,message:'La sesión que intentas editar ya no existe.'}
-  if(!assignment)return {ok:false,run,message:'La asignación seleccionada no existe o está inactiva.'}
-  if(!slot)return {ok:false,run,message:'La franja seleccionada no pertenece a la jornada lectiva activa.'}
+  if(!current)return {ok:false,message:'La sesión que intentas editar ya no existe.'}
+  if(!assignment)return {ok:false,message:'La asignación seleccionada no existe o está inactiva.'}
+  if(!slot)return {ok:false,message:'La franja seleccionada no pertenece a la jornada lectiva activa.'}
 
   const matchingLock=(project.scheduleLocks??[]).find(lock=>
     lock.assignmentId===current.assignmentId&&lock.day===current.day&&lock.sessionId===current.sessionId
@@ -46,17 +60,17 @@ export function prepareScheduleEntryChange(
       (matchingLock.mode==='position'||matchingLock.mode==='full')&&
       (change.day!==current.day||change.sessionId!==current.sessionId)
     ){
-      return {ok:false,run,message:'Movimiento rechazado: la posición de esta sesión está bloqueada.'}
+      return {ok:false,message:'La posición de esta sesión está bloqueada.'}
     }
     const nextAssignment=project.assignments.find(item=>item.id===change.assignmentId&&item.active)
     if(
       (matchingLock.mode==='teacher'||matchingLock.mode==='full')&&
       nextAssignment?.teacherId!==matchingLock.teacherId
     ){
-      return {ok:false,run,message:'Movimiento rechazado: el docente de esta sesión está bloqueado.'}
+      return {ok:false,message:'El docente de esta sesión está bloqueado.'}
     }
     if(matchingLock.mode==='full'&&change.assignmentId!==current.assignmentId){
-      return {ok:false,run,message:'Movimiento rechazado: esta sesión está bloqueada completamente.'}
+      return {ok:false,message:'Esta sesión está bloqueada completamente.'}
     }
   }
 
@@ -76,8 +90,31 @@ export function prepareScheduleEntryChange(
       item.code==='TEACHER_LOAD'?'se supera la carga lectiva del docente':
       item.ruleCode?'se incumple la regla HARD '+item.ruleCode:'se incumple una regla HARD'
     )
-    return {ok:false,run,message:'Movimiento rechazado: '+[...new Set(labels)].join('; ')+'.'}
+    return {ok:false,message:[...new Set(labels)].join('; ')+'.'}
   }
+
+  return {ok:true,current,assignment,slot}
+}
+
+export function previewScheduleEntryChange(
+  project:ViyeuticaProject,
+  run:GenerationRun,
+  change:ScheduleEntryChange,
+):ScheduleMovePreview{
+  const validation=validateScheduleEntryChange(project,run,change)
+  return validation.ok
+    ? {allowed:true,message:'Movimiento disponible.'}
+    : {allowed:false,message:validation.message}
+}
+
+export function prepareScheduleEntryChange(
+  project:ViyeuticaProject,
+  run:GenerationRun,
+  change:ScheduleEntryChange,
+):ScheduleEditResult{
+  const validation=validateScheduleEntryChange(project,run,change)
+  if(!validation.ok)return {ok:false,run,message:'Movimiento rechazado: '+validation.message}
+  const {current,assignment}=validation
 
   const nextEntry:GeneratedScheduleEntry={
     ...current,
