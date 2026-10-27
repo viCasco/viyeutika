@@ -2237,3 +2237,22 @@ button.btn:disabled:hover{
   .import-export-workspace-tabs{display:grid;grid-template-columns:1fr}
   .import-export-workspace-tabs button{justify-content:center}
 }
+
+
+/* === Spaces workspace refinements === */
+.spaces-page{display:flex;flex-direction:column;gap:16px}
+.spaces-page .study-collapsible-card{flex:0 0 auto}
+.spaces-filter-stack{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+.spaces-filter-row{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:start;border-bottom:1px solid var(--border)}
+.spaces-filter-row:last-child{border-bottom:0}
+.spaces-filter-row>span{padding:18px 0 0 16px;font-size:8.5px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.spaces-filter-row .list-filter-tags{border-bottom:0;padding:11px 16px}
+.table-sort-button{width:100%;display:inline-flex;align-items:center;gap:6px;padding:0;border:0;background:transparent;color:inherit;text-transform:inherit;letter-spacing:inherit;font:inherit;font-weight:inherit;cursor:pointer;text-align:left}
+.table-sort-button svg{flex:0 0 auto;opacity:.45}
+.table-sort-button.active{color:var(--navy2)}
+.table-sort-button.active svg{opacity:1}
+[data-theme="dark"] .table-sort-button.active{color:#9fc8ef}
+@media(max-width:700px){
+  .spaces-filter-row{grid-template-columns:1fr}
+  .spaces-filter-row>span{padding:10px 16px 0}
+}
