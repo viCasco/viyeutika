@@ -39,11 +39,14 @@ function fixture():{project:ViyeuticaProject;run:GenerationRun}{
 }
 
 describe('transactional schedule editing',()=>{
-  it('rejects moving a main session onto an occupied group slot',()=>{
+  it('swaps two occupied sessions when the resulting timetable remains valid',()=>{
     const {project,run}=fixture()
     const result=prepareScheduleEntryChange(project,run,{entryId:'e1',assignmentId:'a1',day:'L',sessionId:'s2'})
-    expect(result.ok).toBe(false)
-    expect(result.run).toBe(run)
+    expect(result.ok).toBe(true)
+    expect(result.run).not.toBe(run)
+    expect(result.run.entries.find(entry=>entry.id==='e1')).toMatchObject({assignmentId:'a1',day:'L',sessionId:'s2'})
+    expect(result.run.entries.find(entry=>entry.id==='e2')).toMatchObject({assignmentId:'a2',day:'L',sessionId:'s1'})
+    expect(result.message).toContain('Intercambio')
   })
 
   it('accepts swapping assignment through an existing valid assignment when the final schedule stays valid',()=>{
