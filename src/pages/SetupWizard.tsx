@@ -141,13 +141,6 @@ export function SetupWizard({
       </section>
 
       {workspace==='center'?<>
-      <section className="structure-summary">
-        <Summary label="Centro" value={project.center.name||'—'} detail={project.center.locality||'sin localidad'}/>
-        <Summary label="Código oficial" value={project.center.officialCode||'—'} detail={project.center.ownership?ownershipOptions.find(item=>item.value===project.center.ownership)?.label??project.center.ownership:'sin titularidad'}/>
-        <Summary label="Tipo" value={project.center.centerType||'—'} detail={project.center.province||'sin provincia'}/>
-        <Summary label="Etapas" value={String(project.center.stages.length)} detail={project.center.stages.join(' · ')||'sin etapas'}/>
-      </section>
-
       <article className={'aside-card validation section-prevalidation-card '+(isCenterComplete(project.center)?'ready':'incomplete')}>
         <span className="panel-kicker">ESTADO:</span>
         <strong>{isCenterComplete(project.center)?'Sección Datos del centro válida':'Sección Datos del centro incompleta'}</strong>
@@ -219,8 +212,6 @@ export function SetupWizard({
     </div>
   )
 }
-
-function Summary({label,value,detail}:{label:string;value:string;detail:string}){return <article className="structure-summary-card"><span>{label}</span><strong>{value}</strong><small>{detail}</small></article>}
 
 function Field({
   label, required, error, wide, children,
