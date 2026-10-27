@@ -1703,13 +1703,15 @@ button.btn:disabled:hover{
 .section-form-modal.rule-editor-modal{width:min(1320px,calc(100vw - 32px))}
 .section-form-modal .app-modal-body{padding:18px;overflow:auto}
 .groups-table-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.center-data-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border-top:1px solid var(--border)}
-.center-data-grid>div{min-width:0;padding:13px 15px;background:var(--surface)}
+.center-data-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px;background:transparent;border-top:1px solid var(--border)}
+.center-data-grid>div{min-width:0;padding:13px 14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 3px 10px rgba(16,39,76,.035)}
 .center-data-grid span,.center-data-grid strong{display:block}
-.center-data-grid span{font-size:8.5px;color:var(--muted);margin-bottom:4px}
+.center-data-grid span{font-size:8.5px;color:var(--muted);margin-bottom:5px}
 .center-data-grid strong{font-size:10.5px;overflow-wrap:anywhere}
+.center-template-panel .template-actions{flex-direction:row;flex-wrap:wrap;align-items:stretch}
+.center-template-panel .template-action{width:auto;flex:0 0 auto;min-width:max-content}
 @media(max-width:900px){.section-info-grid{grid-template-columns:1fr}.center-data-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-form-modal,.section-form-modal.rule-editor-modal{width:100%;max-height:calc(100vh - 20px)}}
-@media(max-width:650px){.section-form-modal-backdrop{padding:10px}.section-form-modal,.section-form-modal.rule-editor-modal{max-height:calc(100vh - 10px);border-radius:16px}.center-data-grid{grid-template-columns:1fr}}
+@media(max-width:650px){.section-form-modal-backdrop{padding:10px}.section-form-modal,.section-form-modal.rule-editor-modal{max-height:calc(100vh - 10px);border-radius:16px}.center-data-grid{grid-template-columns:1fr}.center-template-panel .template-actions{display:grid;grid-template-columns:1fr}.center-template-panel .template-action{width:100%;min-width:0}}
 
 
 .schedule-secondary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}

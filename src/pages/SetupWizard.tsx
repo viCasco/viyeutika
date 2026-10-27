@@ -197,7 +197,7 @@ export function SetupWizard({
         </form>
       </div>}
 
-      <div className="section-template-full">
+      <div className="section-template-full center-template-panel">
         <TemplatePanel
           title="Tipo de centro"
           description="Rellena tipo, titularidad pública si aún no está indicada y etapas habituales. No modifica nombre, código ni ubicación."
