@@ -1,4 +1,4 @@
-import { WandSparkles } from 'lucide-react'
+import { LayoutTemplate, WandSparkles } from 'lucide-react'
 
 export interface TemplateAction {
   id:string
@@ -12,10 +12,12 @@ export function TemplatePanel({
   title='Plantilla rápida',
   description='Carga una base editable para acelerar la configuración.',
   actions,
+  showActionIcons=false,
 }:{
   title?:string
   description?:string
   actions:TemplateAction[]
+  showActionIcons?:boolean
 }) {
   return (
     <article className="aside-card template-panel">
@@ -32,6 +34,7 @@ export function TemplatePanel({
             onClick={action.onApply}
             disabled={action.disabled}
           >
+            {showActionIcons&&<LayoutTemplate className="template-action-icon" size={22}/>}
             <span>{action.label}</span>
             <small>{action.description}</small>
           </button>

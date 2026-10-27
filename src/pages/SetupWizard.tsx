@@ -199,6 +199,7 @@ export function SetupWizard({
 
       <div className="section-template-full center-template-panel">
         <TemplatePanel
+          showActionIcons
           title="Tipo de centro"
           description="Rellena tipo, titularidad pública si aún no está indicada y etapas habituales. No modifica nombre, código ni ubicación."
           actions={[

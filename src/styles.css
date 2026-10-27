@@ -294,6 +294,7 @@ button.wizard-step:focus-visible{outline:3px solid rgba(89,180,17,.22);outline-o
 .template-actions{display:flex;flex-direction:column;gap:7px;margin-top:6px}
 .template-action{width:100%;text-align:left;border:1px solid var(--border);border-radius:10px;background:var(--field-bg,#fff);color:inherit;padding:10px 11px;cursor:pointer;transition:border-color .15s,transform .15s,background .15s}
 .template-action:hover:not(:disabled){transform:translateY(-1px);border-color:#9bc879;background:#f7fbf4}
+.template-action-icon{display:block;margin-bottom:10px;color:var(--green2)}
 .template-action span,.template-action small{display:block}
 .template-action span{font-size:10.5px;font-weight:800}
 .template-action small{margin-top:3px;font-size:8.8px;line-height:1.4;color:var(--muted)}
@@ -1697,21 +1698,21 @@ button.btn:disabled:hover{
 /* === Shared wizard information hierarchy === */
 .section-prevalidation-card{width:100%;padding:16px 18px}
 .section-template-full{width:100%}
-.section-info-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.section-info-grid{display:grid;gap:12px}
 .section-form-modal-backdrop{padding:16px}
 .section-form-modal{width:min(1180px,calc(100vw - 32px));max-height:calc(100vh - 32px)}
 .section-form-modal.rule-editor-modal{width:min(1320px,calc(100vw - 32px))}
 .section-form-modal .app-modal-body{padding:18px;overflow:auto}
 .groups-table-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .center-data-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px;background:transparent;border-top:1px solid var(--border)}
-.center-data-grid>div{min-width:0;padding:13px 14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);box-shadow:0 3px 10px rgba(16,39,76,.035)}
+.center-data-grid>div{padding:12px}
 .center-data-grid span,.center-data-grid strong{display:block}
 .center-data-grid span{font-size:8.5px;color:var(--muted);margin-bottom:5px}
 .center-data-grid strong{font-size:10.5px;overflow-wrap:anywhere}
-.center-template-panel .template-actions{flex-direction:row;flex-wrap:wrap;align-items:stretch}
-.center-template-panel .template-action{width:auto;flex:0 0 auto;min-width:max-content}
-@media(max-width:900px){.section-info-grid{grid-template-columns:1fr}.center-data-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-form-modal,.section-form-modal.rule-editor-modal{width:100%;max-height:calc(100vh - 20px)}}
-@media(max-width:650px){.section-form-modal-backdrop{padding:10px}.section-form-modal,.section-form-modal.rule-editor-modal{max-height:calc(100vh - 10px);border-radius:16px}.center-data-grid{grid-template-columns:1fr}.center-template-panel .template-actions{display:grid;grid-template-columns:1fr}.center-template-panel .template-action{width:100%;min-width:0}}
+.center-template-panel .template-actions{display:flex;flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:10px}
+.center-template-panel .template-action{flex:none;width:auto;min-width:max-content;min-height:120px}
+@media(max-width:900px){.center-data-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.section-form-modal,.section-form-modal.rule-editor-modal{width:100%;max-height:calc(100vh - 20px)}}
+@media(max-width:650px){.section-form-modal-backdrop{padding:10px}.section-form-modal,.section-form-modal.rule-editor-modal{max-height:calc(100vh - 10px);border-radius:16px}.center-data-grid{grid-template-columns:1fr}.center-template-panel .template-actions{display:grid;grid-template-columns:1fr}.center-template-panel .template-action{width:100%;min-width:0;min-height:120px}}
 
 
 .schedule-secondary-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:stretch}
