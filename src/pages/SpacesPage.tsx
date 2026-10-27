@@ -66,12 +66,13 @@ export function SpacesPage({
   const activeTeachers=project.teachers.filter(item=>item.active)
 
   const sortedSpaces=useMemo(()=>{
-    if(!spaceSort.key)return project.spaces
+    const sortKey=spaceSort.key
+    if(!sortKey)return project.spaces
     return [...project.spaces].sort((a,b)=>{
       let result=0
-      if(spaceSort.key==='capacity')result=(a.capacity??-1)-(b.capacity??-1)
-      else if(spaceSort.key==='shared')result=Number(a.shared)-Number(b.shared)
-      else result=compareText(String(a[spaceSort.key]??''),String(b[spaceSort.key]??''))
+      if(sortKey==='capacity')result=(a.capacity??-1)-(b.capacity??-1)
+      else if(sortKey==='shared')result=Number(a.shared)-Number(b.shared)
+      else result=compareText(String(a[sortKey]??''),String(b[sortKey]??''))
       return spaceSort.direction==='asc'?result:-result
     })
   },[project.spaces,spaceSort])
