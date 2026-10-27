@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, ArrowUpDown, LayoutGrid, List, RotateCcw } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, LayoutGrid, List } from 'lucide-react'
 
 export type DataView='table'|'cards'
 export type SortDirection='asc'|'desc'
@@ -27,33 +27,19 @@ export function sortCollection<T,K extends string>(
   })
 }
 
-export function DataViewControls<K extends string>({
-  view,onView,sort,onSort,options,
-}:{
+export function DataViewControls<K extends string>(props:{
   view:DataView
   onView:(view:DataView)=>void
   sort:SortState<K>
   onSort:(sort:SortState<K>)=>void
   options:SortOption<K>[]
 }){
+  const {view,onView}=props
   return <div className="data-view-controls">
     <div className="staff-view-toggle" role="group" aria-label="Cambiar vista">
       <button type="button" className={view==='table'?'active':''} title="Vista de tabla" aria-label="Vista de tabla" aria-pressed={view==='table'} onClick={()=>onView('table')}><List size={16}/></button>
       <button type="button" className={view==='cards'?'active':''} title="Vista de tarjetas" aria-label="Vista de tarjetas" aria-pressed={view==='cards'} onClick={()=>onView('cards')}><LayoutGrid size={16}/></button>
     </div>
-    <label className="data-sort-select">
-      <span>Orden</span>
-      <select value={sort.key??''} onChange={event=>onSort(event.target.value?{key:event.target.value as K,direction:'asc'}:{key:null,direction:'asc'})}>
-        <option value="">Orden original</option>
-        {options.map(option=><option key={option.key} value={option.key}>{option.label}</option>)}
-      </select>
-    </label>
-    {sort.key&&<>
-      <button type="button" className="data-sort-direction" onClick={()=>onSort({...sort,direction:sort.direction==='asc'?'desc':'asc'})} title={sort.direction==='asc'?'Ascendente':'Descendente'} aria-label={sort.direction==='asc'?'Orden ascendente':'Orden descendente'}>
-        {sort.direction==='asc'?<ArrowUp size={15}/>:<ArrowDown size={15}/>}
-      </button>
-      <button type="button" className="data-sort-reset" onClick={()=>onSort({key:null,direction:'asc'})} title="Restaurar orden original" aria-label="Restaurar orden original"><RotateCcw size={14}/></button>
-    </>}
   </div>
 }
 
