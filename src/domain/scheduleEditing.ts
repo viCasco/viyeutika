@@ -157,6 +157,24 @@ function prepareSwap(
   if(!targetAssignment){
     return {ok:false,run,message:'Movimiento rechazado: la asignación de la sesión destino no existe o está inactiva.'}
   }
+  if(sourceAssignment.groupId!==current.groupId||targetAssignment.groupId!==current.groupId){
+    return {ok:false,run,message:'Movimiento rechazado: el intercambio solo puede realizarse entre sesiones del mismo grupo.'}
+  }
+
+  const sourceMatchingLock=(project.scheduleLocks??[]).find(lock=>
+    lock.assignmentId===current.assignmentId&&lock.day===current.day&&lock.sessionId===current.sessionId
+  )
+  if(sourceMatchingLock){
+    if(
+      (sourceMatchingLock.mode==='teacher'||sourceMatchingLock.mode==='full')&&
+      sourceAssignment.teacherId!==sourceMatchingLock.teacherId
+    ){
+      return {ok:false,run,message:'Movimiento rechazado: el docente de la sesión de origen está bloqueado.'}
+    }
+    if(sourceMatchingLock.mode==='full'&&change.assignmentId!==current.assignmentId){
+      return {ok:false,run,message:'Movimiento rechazado: la sesión de origen está bloqueada completamente.'}
+    }
+  }
 
   const sourceLock=movementLockMessage(project,current,{day:change.day,sessionId:change.sessionId})
   if(sourceLock)return {ok:false,run,message:'Movimiento rechazado: '+sourceLock}
