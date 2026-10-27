@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  Building2, FileInput, FileSearch, Gauge, GraduationCap, Layers3, LayoutGrid, Menu, PanelLeftClose,
+  Building2, FileInput, FileSearch, Gauge, GraduationCap, LayoutGrid, Menu, PanelLeftClose,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
@@ -20,7 +20,6 @@ import { AssignmentsPage } from './pages/AssignmentsPage'
 import { RulesPage } from './pages/RulesPage'
 import { PrevalidationPage } from './pages/PrevalidationPage'
 import { GenerationPage } from './pages/GenerationPage'
-import { SubgroupsPage } from './pages/SubgroupsPage'
 import { SpacesPage } from './pages/SpacesPage'
 import { useProject } from './hooks/useProject'
 import { useTheme } from './hooks/useTheme'
@@ -30,7 +29,6 @@ const navigation = [
   { path: '/cursos', label: 'Curso académico', icon: CalendarDays },
   { path: '/normativa', label: 'Normativa', icon: FileSearch },
   { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
-  { path: '/subgrupos', label: 'Subgrupos y desdobles', icon: Layers3 },
   { path: '/espacios', label: 'Espacios y edificios', icon: Building2 },
   { path: '/centro', label: 'Centro', icon: GraduationCap },
   { path: '/grupos', label: 'Estructura y grupos', icon: LayoutGrid },
@@ -47,7 +45,6 @@ const descriptions: Record<string,string> = {
   '/cursos': 'Creación, histórico y estado de los cursos académicos.',
   '/normativa': 'Fuentes normativas, extracción de reglas y revisión antes de aplicar plantillas.',
   '/proyecto-json': 'Importación de plantillas y exportación de horarios, informes y respaldos.',
-  '/subgrupos': 'Desdobles, optativas y simultaneidad compatible dentro de grupos base.',
   '/espacios': 'Aulas, instalaciones, edificios, disponibilidad y desplazamientos.',
   '/profesorado': 'Plantilla docente, especialidades, jornadas, cargos y reducciones.',
   '/asignaciones': 'Relación entre grupos, materias, profesorado y responsabilidades docentes.',
@@ -65,6 +62,7 @@ const getRoute = () => {
   if(path==='/exportaciones'||path==='/edicion-masiva')return '/proyecto-json'
   if(path==='/publicacion')return '/horarios'
   if(path==='/operaciones')return '/profesorado'
+  if(path==='/subgrupos')return '/grupos'
   return path
 }
 
@@ -98,7 +96,6 @@ export default function App() {
     if (route === '/materias') return <StudyPlanPage project={project} navigate={go}/>
     if (route === '/normativa') return <NormativePage project={project}/>
     if (route === '/proyecto-json') return <ProjectImportPage project={project} navigate={go}/>
-    if (route === '/subgrupos') return <SubgroupsPage project={project} navigate={go}/>
     if (route === '/espacios') return <SpacesPage project={project} navigate={go}/>
     if (route === '/profesorado') return <StaffPage project={project} navigate={go}/>
     if (route === '/asignaciones') return <AssignmentsPage project={project} navigate={go}/>

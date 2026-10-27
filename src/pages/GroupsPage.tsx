@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import {
-  ArrowLeft, BookOpen, CalendarClock, CheckCircle2, GraduationCap, LayoutGrid,
+  ArrowLeft, BookOpen, CalendarClock, CheckCircle2, GraduationCap, Layers3, LayoutGrid,
   Pencil, Plus, Save, ShieldCheck, SlidersHorizontal, Sparkles, Trash2, Users,
 } from 'lucide-react'
 import {
@@ -14,6 +14,7 @@ import {
 import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
+import { SubgroupsPage } from './SubgroupsPage'
 
 interface GroupDraft {
   stage: EducationStage | ''
@@ -43,6 +44,14 @@ function groupName(level: string, line: string) {
   return line.trim() ? `${level} ${line.trim().toUpperCase()}` : level
 }
 
+function initialGroupsWorkspace(){
+  const raw=window.location.hash.replace(/^#/,'')
+  const [path,query='']=raw.split('?')
+  if(path==='/subgrupos')return 'subgroups' as const
+  const params=new URLSearchParams(query)
+  return params.get('tab')==='subgrupos'?'subgroups' as const:'groups' as const
+}
+
 export function GroupsPage({
   project,
   navigate,
@@ -55,6 +64,13 @@ export function GroupsPage({
   const [error,setError] = useState('')
   const [stageFilter,setStageFilter] = useState<'all'|EducationStage>('all')
   const [modalOpen,setModalOpen] = useState(false)
+  const [workspace,setWorkspace]=useState<'groups'|'subgroups'>(initialGroupsWorkspace)
+
+  const switchWorkspace=(next:'groups'|'subgroups')=>{
+    setWorkspace(next)
+    const suffix=next==='subgroups'?'?tab=subgrupos':''
+    window.history.replaceState(null,'',`#/grupos${suffix}`)
+  }
   const groups = project.groups ?? []
   const allowedStages = project.center.stages
 
@@ -201,6 +217,12 @@ export function GroupsPage({
 
     <WizardStepper currentStep={2} project={project} navigate={navigate}/>
 
+    <section className="import-export-workspace-tabs" aria-label="Estructura y grupos o subgrupos y desdobles">
+      <button type="button" className={workspace==='groups'?'active':''} onClick={()=>switchWorkspace('groups')}><LayoutGrid size={16}/> Estructura y grupos</button>
+      <button type="button" className={workspace==='subgroups'?'active':''} onClick={()=>switchWorkspace('subgroups')}><Layers3 size={16}/> Subgrupos y desdobles</button>
+    </section>
+
+    {workspace==='groups'?<>
     <section className="structure-summary">
       <Summary label="Etapas activas" value={String(allowedStages.length)} detail={allowedStages.join(' · ')}/>
       <Summary label="Niveles creados" value={String(levelTotal)} detail="con al menos un grupo activo"/>
@@ -280,6 +302,7 @@ export function GroupsPage({
         ]}
       />
     </div>
+    </>:<SubgroupsPage project={project} navigate={navigate} embedded/>}
   </div>
 }
 

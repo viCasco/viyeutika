@@ -9,9 +9,11 @@ const uid=()=> 'sub_'+crypto.randomUUID()
 export function SubgroupsPage({
   project,
   navigate,
+  embedded=false,
 }:{
   project:ViyeuticaProject
   navigate:(path:string)=>void
+  embedded?:boolean
 }){
   const [parentGroupId,setParentGroupId]=useState(project.groups.find(group=>group.active)?.id??'')
   const [name,setName]=useState('')
@@ -71,13 +73,13 @@ export function SubgroupsPage({
     })
   }
 
-  return <div className="wizard-page subgroups-page">
-    <section className="wizard-intro">
+  return <div className={embedded?'subgroups-page embedded':'wizard-page subgroups-page'}>
+    {!embedded&&<section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><Layers3 size={28}/> Subgrupos y desdobles</h1>
         <p>Define participantes dentro de un grupo base sin cambiar sus IDs históricos. Dos subgrupos distintos pueden coincidir en una sesión si no comparten participantes ni recursos incompatibles.</p>
       </div>
-    </section>
+    </section>}
 
     {modalOpen&&<AppModal
       title="Añadir subgrupo"
