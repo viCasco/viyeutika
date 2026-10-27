@@ -12,9 +12,11 @@ type SpaceModal='space'|'availability'|'travel'|null
 export function SpacesPage({
   project,
   navigate,
+  embedded=false,
 }:{
   project:ViyeuticaProject
   navigate:(path:string)=>void
+  embedded?:boolean
 }){
   const [name,setName]=useState('')
   const [type,setType]=useState('')
@@ -89,13 +91,13 @@ export function SpacesPage({
     closeModal()
   }
 
-  return <div className="wizard-page spaces-page">
-    <section className="wizard-intro">
+  return <div className={embedded?'spaces-page embedded':'wizard-page spaces-page'}>
+    {!embedded&&<section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><Building2 size={28}/> Espacios y desplazamientos</h1>
         <p>Modela aulas, instalaciones, edificios, disponibilidad y tiempos de desplazamiento. Las reservas incompatibles se validan junto con docentes y grupos.</p>
       </div>
-    </section>
+    </section>}
 
     {modal==='space'&&<AppModal
       title="Añadir espacio"

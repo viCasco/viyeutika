@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import {
-  ArrowLeft, ArrowRight, Check, CheckCircle2, Save, Sparkles,
+  ArrowLeft, ArrowRight, Building2, Check, CheckCircle2, Save, Sparkles,
 } from 'lucide-react'
 import {
   isCenterComplete,
@@ -13,6 +13,7 @@ import {
 import { saveProject } from '../store/projectStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { TemplatePanel } from '../components/TemplatePanel'
+import { SpacesPage } from './SpacesPage'
 
 const stages: EducationStage[] = ['Infantil', 'Primaria', 'ESO', 'Bachillerato']
 const ownershipOptions: { value: Ownership; label: string }[] = [
@@ -31,6 +32,14 @@ const centerTypes: { value: CenterType; label: string }[] = [
 
 type Errors = Partial<Record<keyof CenterData | 'stages', string>>
 
+function initialCenterWorkspace(){
+  const raw=window.location.hash.replace(/^#/,'')
+  const [path,query='']=raw.split('?')
+  if(path==='/espacios')return 'spaces' as const
+  const params=new URLSearchParams(query)
+  return params.get('tab')==='espacios'?'spaces' as const:'center' as const
+}
+
 export function SetupWizard({
   project,
   navigate,
@@ -42,6 +51,13 @@ export function SetupWizard({
   const [errors, setErrors] = useState<Errors>({})
   const [saved, setSaved] = useState(false)
   const [modalOpen,setModalOpen]=useState(()=>!isCenterComplete(project.center))
+  const [workspace,setWorkspace]=useState<'center'|'spaces'>(initialCenterWorkspace)
+
+  const switchWorkspace=(next:'center'|'spaces')=>{
+    setWorkspace(next)
+    const suffix=next==='spaces'?'?tab=espacios':''
+    window.history.replaceState(null,'',`#/centro${suffix}`)
+  }
 
   const complete = useMemo(() => isCenterComplete(form), [form])
   const guide=!form.name.trim()?'Introduce el nombre oficial del centro.'
@@ -119,6 +135,12 @@ export function SetupWizard({
 
       <WizardStepper currentStep={1} project={project} navigate={navigate}/>
 
+      <section className="import-export-workspace-tabs" aria-label="Centro o espacios y edificios">
+        <button type="button" className={workspace==='center'?'active':''} onClick={()=>switchWorkspace('center')}><Sparkles size={16}/> Centro</button>
+        <button type="button" className={workspace==='spaces'?'active':''} onClick={()=>switchWorkspace('spaces')}><Building2 size={16}/> Espacios y edificios</button>
+      </section>
+
+      {workspace==='center'?<>
       <section className="structure-summary">
         <Summary label="Centro" value={project.center.name||'—'} detail={project.center.locality||'sin localidad'}/>
         <Summary label="Código oficial" value={project.center.officialCode||'—'} detail={project.center.ownership?ownershipOptions.find(item=>item.value===project.center.ownership)?.label??project.center.ownership:'sin titularidad'}/>
@@ -192,6 +214,7 @@ export function SetupWizard({
         <article className="aside-card"><span className="panel-kicker">Curso activo</span><strong>{project.academicYear.label}</strong><p>Los datos de configuración quedan asociados al curso académico activo.</p></article>
         <article className="aside-card info"><span className="panel-kicker">Privacidad</span><strong>Prototipo local</strong><p>En esta fase los datos se guardan únicamente en este navegador. No se envían a un servidor.</p></article>
       </section>
+      </>:<SpacesPage project={project} navigate={navigate} embedded/>}
     </div>
   )
 }
