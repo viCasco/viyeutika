@@ -78,7 +78,7 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
     },{intent:'replace_project'})
   }
 
-  return <div className={embedded?'operations-page embedded':'wizard-page operations-page'}>
+  return <div className={embedded?'operations-page embedded separated-sections':'wizard-page operations-page separated-sections'}>
     {!embedded&&<section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><CalendarRange size={28}/> Sustituciones y explotación</h1>
@@ -86,7 +86,7 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
       </div>
     </section>}
 
-    {!project.establishedScheduleRun&&<section className="empty-state-card"><UserRoundX size={32}/><h2>Necesitas un horario establecido</h2><p>Guarda primero una propuesta válida como horario del curso para utilizarla como referencia operativa.</p></section>}
+    {!project.establishedScheduleRun&&<section className="empty-state-card operations-reference-state"><UserRoundX size={32}/><h2>Necesitas un horario establecido</h2><p>Guarda primero una propuesta válida como horario del curso para utilizarla como referencia operativa.</p></section>}
 
     {modalOpen&&<AppModal
       title="Añadir cambio temporal"
@@ -108,7 +108,7 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
       </div>
     </AppModal>}
 
-    <section className="groups-table-card">
+    <section className="groups-table-card operations-changes-section">
       <div className="groups-table-heading">
         <div><span className="panel-kicker">Vigencia</span><h2>Cambios registrados</h2></div>
         <div className="groups-table-actions">
@@ -159,7 +159,7 @@ export function OperationsPage({project,embedded=false}:{project:ViyeuticaProjec
         </div>}
     </section>
 
-    <section className="operational-preview-card">
+    <section className="operational-preview-card operations-preview-section">
       <div className="groups-table-heading">
         <div><span className="panel-kicker">Explotación</span><h2>Horario operativo por fecha</h2><p>Fuera de la vigencia de los cambios se recupera automáticamente la referencia establecida.</p></div>
         <label className="operational-date"><span>Fecha</span><input type="date" value={previewDate} onChange={e=>setPreviewDate(e.target.value)}/></label>

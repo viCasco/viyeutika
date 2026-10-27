@@ -2288,3 +2288,20 @@ button.btn:disabled:hover{
   .data-sort-select select{width:100%;min-width:0}
   .data-card-grid{grid-template-columns:1fr;padding:10px}
 }
+
+
+/* === Contextual filter views === */
+.context-filter-panel{border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 94%,var(--table-head,#f8fafc) 6%)}
+.context-filter-view{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:12px 16px 4px}
+.context-filter-view .generation-view-switch{margin-top:0}
+.context-filter-panel .assignment-filter-row,
+.context-filter-panel .spaces-filter-row{border-bottom:0;padding:6px 0 10px}
+.context-filter-panel .assignment-filter-row{padding-left:16px;padding-right:16px}
+.operations-page.separated-sections{display:flex;flex-direction:column;gap:16px}
+.operations-page.separated-sections>.empty-state-card,
+.operations-page.separated-sections>.groups-table-card,
+.operations-page.separated-sections>.operational-preview-card{margin:0}
+.operations-reference-state{flex:0 0 auto}
+@media(max-width:700px){
+  .context-filter-view{align-items:flex-start;flex-direction:column}
+}

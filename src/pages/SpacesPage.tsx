@@ -54,6 +54,7 @@ export function SpacesPage({
   const [groupFilter,setGroupFilter]=useState('all')
   const [subjectFilter,setSubjectFilter]=useState('all')
   const [teacherFilter,setTeacherFilter]=useState('all')
+  const [reservationFilterView,setReservationFilterView]=useState<'group'|'subject'|'teacher'>('group')
 
   const [spaceSort,setSpaceSort]=useState<SortState<'name'|'type'|'building'|'capacity'|'shared'>>({key:null,direction:'asc'})
   const [assignmentSort,setAssignmentSort]=useState<SortState<'group'|'subject'|'teacher'|'space'>>({key:null,direction:'asc'})
@@ -295,10 +296,18 @@ export function SpacesPage({
         </div>
       </div>
       {assignmentsExpanded&&<div className="study-collapsible-content">
-        {project.assignments.filter(item=>item.active).length>0&&<div className="spaces-filter-stack">
-          <FilterTagRow label="Grupo" allLabel="Todos" value={groupFilter} options={activeGroups.map(group=>({value:group.id,label:group.name}))} onChange={setGroupFilter}/>
-          <FilterTagRow label="Materia" allLabel="Todas" value={subjectFilter} options={activeSubjects.map(subject=>({value:subject.id,label:subject.name}))} onChange={setSubjectFilter}/>
-          <FilterTagRow label="Docente" allLabel="Todos" value={teacherFilter} options={activeTeachers.map(teacher=>({value:teacher.id,label:teacher.name}))} onChange={setTeacherFilter}/>
+        {project.assignments.filter(item=>item.active).length>0&&<div className="context-filter-panel">
+          <div className="context-filter-view">
+            <span className="panel-kicker">Vista</span>
+            <div className="generation-view-switch">
+              <button type="button" className={reservationFilterView==='group'?'active':''} onClick={()=>{setReservationFilterView('group');setSubjectFilter('all');setTeacherFilter('all')}}>Por grupo</button>
+              <button type="button" className={reservationFilterView==='subject'?'active':''} onClick={()=>{setReservationFilterView('subject');setGroupFilter('all');setTeacherFilter('all')}}>Por materia</button>
+              <button type="button" className={reservationFilterView==='teacher'?'active':''} onClick={()=>{setReservationFilterView('teacher');setGroupFilter('all');setSubjectFilter('all')}}>Por docente</button>
+            </div>
+          </div>
+          {reservationFilterView==='group'&&<FilterTagRow label="Grupos" allLabel="Todos" value={groupFilter} options={activeGroups.map(group=>({value:group.id,label:group.name}))} onChange={setGroupFilter}/>}
+          {reservationFilterView==='subject'&&<FilterTagRow label="Materias" allLabel="Todas" value={subjectFilter} options={activeSubjects.map(subject=>({value:subject.id,label:subject.name}))} onChange={setSubjectFilter}/>}
+          {reservationFilterView==='teacher'&&<FilterTagRow label="Docentes" allLabel="Todos" value={teacherFilter} options={activeTeachers.map(teacher=>({value:teacher.id,label:teacher.name}))} onChange={setTeacherFilter}/>}
         </div>}
         {project.assignments.filter(item=>item.active).length===0
           ? <div className="groups-empty"><Building2 size={28}/><strong>No hay asignaciones activas</strong><p>Configura primero las asignaciones docentes del curso.</p></div>

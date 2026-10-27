@@ -59,7 +59,6 @@ export function GenerationPage({
   const [selectedGroupIds,setSelectedGroupIds]=useState<string[]>(['all'])
   const [viewMode,setViewMode]=useState<'group'|'teacher'|'center'>('group')
   const [selectedTeacherId,setSelectedTeacherId]=useState(project.teachers.find(teacher=>teacher.active)?.id??'')
-  const [dayFilter,setDayFilter]=useState<'all'|Weekday>('all')
   const [running,setRunning]=useState(false)
   const [showClearModal,setShowClearModal]=useState(false)
   const [showRegenerateModal,setShowRegenerateModal]=useState(false)
@@ -112,7 +111,7 @@ export function GenerationPage({
   const activeGroups=project.groups.filter(group=>group.active)
   const activeTeachers=project.teachers.filter(teacher=>teacher.active)
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
-  const visibleDays=dayFilter==='all'?project.schedule.activeDays:[dayFilter]
+  const visibleDays=project.schedule.activeDays
   const comparisonRows=runs.map((run,index)=>({run,index,metrics:scheduleMetrics(project,run)}))
   const recommended=recommendedRun(project,runs)
   const baselineRun=runs[0]??draftRun??establishedRun??null
@@ -730,16 +729,9 @@ export function GenerationPage({
             <div>
               <span className="panel-kicker">Vista</span>
               <div className="generation-view-switch">
+                <button type="button" className={viewMode==='center'?'active':''} onClick={()=>setViewMode('center')}>Centro</button>
                 <button type="button" className={viewMode==='group'?'active':''} onClick={()=>setViewMode('group')}>Por grupo</button>
                 <button type="button" className={viewMode==='teacher'?'active':''} onClick={()=>setViewMode('teacher')}>Por docente</button>
-                <button type="button" className={viewMode==='center'?'active':''} onClick={()=>setViewMode('center')}>Centro</button>
-              </div>
-            </div>
-            <div>
-              <span className="panel-kicker">Día</span>
-              <div className="generation-group-tags">
-                <button type="button" className={dayFilter==='all'?'active':''} onClick={()=>setDayFilter('all')}>Todos</button>
-                {project.schedule.activeDays.map(day=><button type="button" key={day} className={dayFilter===day?'active':''} onClick={()=>setDayFilter(day)}>{dayLabels[day]}</button>)}
               </div>
             </div>
           </div>
@@ -756,7 +748,7 @@ export function GenerationPage({
 
           {viewMode==='teacher'&&<div className="generation-toolbar generation-toolbar-tags">
             <div>
-              <span className="panel-kicker">Docente</span>
+              <span className="panel-kicker">Docentes</span>
               <div className="generation-group-tags">
                 {activeTeachers.map(teacher=><button key={teacher.id} type="button" className={selectedTeacherId===teacher.id?'active':''} onClick={()=>setSelectedTeacherId(teacher.id)}>{teacher.name}</button>)}
               </div>

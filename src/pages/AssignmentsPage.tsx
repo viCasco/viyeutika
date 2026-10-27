@@ -89,6 +89,7 @@ export function AssignmentsPage({
   const [assignmentsExpanded,setAssignmentsExpanded]=useState(false)
   const [assignmentGroupFilter,setAssignmentGroupFilter]=useState<'all'|string>('all')
   const [assignmentTeacherFilter,setAssignmentTeacherFilter]=useState<'all'|string>('all')
+  const [assignmentFilterView,setAssignmentFilterView]=useState<'group'|'teacher'>('group')
   const [assignmentsView,setAssignmentsView]=useState<DataView>('table')
   const [assignmentsSort,setAssignmentsSort]=useState<SortState<'group'|'subgroup'|'subject'|'teacher'|'space'|'type'|'sessions'|'minutes'|'source'|'active'>>({key:null,direction:'asc'})
   const [progressExpanded,setProgressExpanded]=useState(false)
@@ -1071,8 +1072,15 @@ export function AssignmentsPage({
       </div>
 
       {assignmentsExpanded&&<div className="assignments-matrix-content">
-        {project.assignments.length>0&&<div className="assignment-filter-stack">
-          <div className="assignment-filter-row">
+        {project.assignments.length>0&&<div className="context-filter-panel">
+          <div className="context-filter-view">
+            <span className="panel-kicker">Vista</span>
+            <div className="generation-view-switch">
+              <button type="button" className={assignmentFilterView==='group'?'active':''} onClick={()=>{setAssignmentFilterView('group');setAssignmentTeacherFilter('all')}}>Por grupo</button>
+              <button type="button" className={assignmentFilterView==='teacher'?'active':''} onClick={()=>{setAssignmentFilterView('teacher');setAssignmentGroupFilter('all')}}>Por docente</button>
+            </div>
+          </div>
+          {assignmentFilterView==='group'&&<div className="assignment-filter-row">
             <span>Grupos</span>
             <div className="list-filter-tags">
               <button type="button" className={assignmentGroupFilter==='all'?'active':''} onClick={()=>setAssignmentGroupFilter('all')}>Todos</button>
@@ -1081,8 +1089,8 @@ export function AssignmentsPage({
                 return <button type="button" key={groupId} className={assignmentGroupFilter===groupId?'active':''} onClick={()=>setAssignmentGroupFilter(groupId)}>{group?.name??'Grupo eliminado'}</button>
               })}
             </div>
-          </div>
-          <div className="assignment-filter-row">
+          </div>}
+          {assignmentFilterView==='teacher'&&<div className="assignment-filter-row">
             <span>Docentes</span>
             <div className="list-filter-tags">
               <button type="button" className={assignmentTeacherFilter==='all'?'active':''} onClick={()=>setAssignmentTeacherFilter('all')}>Todos</button>
@@ -1091,7 +1099,7 @@ export function AssignmentsPage({
                 return <button type="button" key={teacherId} className={assignmentTeacherFilter===teacherId?'active':''} onClick={()=>setAssignmentTeacherFilter(teacherId)}>{teacher?.name??'Docente eliminado'}</button>
               })}
             </div>
-          </div>
+          </div>}
         </div>}
 
         {project.assignments.length===0
