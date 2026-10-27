@@ -1072,34 +1072,28 @@ export function AssignmentsPage({
       </div>
 
       {assignmentsExpanded&&<div className="assignments-matrix-content">
-        {project.assignments.length>0&&<div className="context-filter-panel">
-          <div className="context-filter-view">
-            <span className="panel-kicker">Vista</span>
+        {project.assignments.length>0&&<div className="generation-toolbar generation-view-toolbar">
+          <div className="generation-filter-stack">
+            <span className="panel-kicker">Filtro</span>
             <div className="generation-view-switch">
               <button type="button" className={assignmentFilterView==='group'?'active':''} onClick={()=>{setAssignmentFilterView('group');setAssignmentTeacherFilter('all')}}>Por grupo</button>
               <button type="button" className={assignmentFilterView==='teacher'?'active':''} onClick={()=>{setAssignmentFilterView('teacher');setAssignmentGroupFilter('all')}}>Por docente</button>
             </div>
-          </div>
-          {assignmentFilterView==='group'&&<div className="assignment-filter-row">
-            <span>Grupos</span>
-            <div className="list-filter-tags">
+            {assignmentFilterView==='group'&&<div className="generation-group-tags">
               <button type="button" className={assignmentGroupFilter==='all'?'active':''} onClick={()=>setAssignmentGroupFilter('all')}>Todos</button>
               {assignmentGroupIds.map(groupId=>{
                 const group=project.groups.find(item=>item.id===groupId)
                 return <button type="button" key={groupId} className={assignmentGroupFilter===groupId?'active':''} onClick={()=>setAssignmentGroupFilter(groupId)}>{group?.name??'Grupo eliminado'}</button>
               })}
-            </div>
-          </div>}
-          {assignmentFilterView==='teacher'&&<div className="assignment-filter-row">
-            <span>Docentes</span>
-            <div className="list-filter-tags">
+            </div>}
+            {assignmentFilterView==='teacher'&&<div className="generation-group-tags">
               <button type="button" className={assignmentTeacherFilter==='all'?'active':''} onClick={()=>setAssignmentTeacherFilter('all')}>Todos</button>
               {assignmentTeacherIds.map(teacherId=>{
                 const teacher=project.teachers.find(item=>item.id===teacherId)
                 return <button type="button" key={teacherId} className={assignmentTeacherFilter===teacherId?'active':''} onClick={()=>setAssignmentTeacherFilter(teacherId)}>{teacher?.name??'Docente eliminado'}</button>
               })}
-            </div>
-          </div>}
+            </div>}
+          </div>
         </div>}
 
         {project.assignments.length===0

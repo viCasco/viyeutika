@@ -682,11 +682,10 @@ button.wizard-step:focus-visible{outline:3px solid rgba(89,180,17,.22);outline-o
 
 
 /* === Filtros por grupo y diferencias entre propuestas === */
-.generation-toolbar-tags{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
-.generation-toolbar-tags>div:first-child{min-width:0;flex:1}
 .generation-group-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-.generation-group-tags button{border:1px solid var(--border);border-radius:999px;background:var(--surface);color:var(--muted);padding:7px 10px;font-size:8.2px;font-weight:800;cursor:pointer}
-.generation-group-tags button.active{background:#eef7e9;border-color:#9dce7b;color:#4b8b24}
+.generation-group-tags button{border:1px solid #c9d8ea;border-radius:999px;background:#f8fbff;color:#526b84;padding:7px 10px;font-size:8.2px;font-weight:800;cursor:pointer}
+.generation-group-tags button:hover{border-color:#a9c1dc;color:#2d5f95;background:#f2f7fd}
+.generation-group-tags button.active{background:#e7f0fa;border-color:#8fb2dc;color:#1f5b95}
 .generation-multi-schedule{display:grid;gap:18px}
 .generation-group-schedule{display:grid;gap:0;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--surface)}
 .generation-group-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:#f6f8fb;border-bottom:1px solid var(--border)}
@@ -698,10 +697,12 @@ button.wizard-step:focus-visible{outline:3px solid rgba(89,180,17,.22);outline-o
 .diff-swatch{width:14px;height:14px;border-radius:4px;background:#fff3cf;border:1px solid #d9a728}
 .proposal-diff-cell{position:relative;background:#fff8df!important;box-shadow:inset 0 0 0 2px #d9a728}
 .proposal-diff-badge{display:inline-block;margin-top:4px;padding:2px 5px;border-radius:999px;background:#f5d36f;color:#6a5311;font-size:6.8px;font-style:normal;font-weight:900;text-transform:uppercase;letter-spacing:.04em}
-[data-theme="dark"] .generation-group-tags button.active{background:#182718;border-color:#3f6135;color:#9fd079}[data-theme="dark"] .generation-group-heading{background:#17202c}
+[data-theme="dark"] .generation-group-tags button{background:#131d28;border-color:#31465d;color:#9fb3c7}
+[data-theme="dark"] .generation-group-tags button:hover{background:#17283a;border-color:#466887;color:#c3d8eb}
+[data-theme="dark"] .generation-group-tags button.active{background:#17324b;border-color:#4d7da8;color:#b8d9f5}[data-theme="dark"] .generation-group-heading{background:#17202c}
 [data-theme="dark"] .proposal-diff-cell{background:#2a2414!important;box-shadow:inset 0 0 0 2px #c49a3b}
 [data-theme="dark"] .diff-swatch{background:#2a2414;border-color:#c49a3b}
-@media(max-width:700px){.generation-toolbar-tags{align-items:stretch}.generation-toolbar-tags>.btn{width:100%}.generation-group-heading{align-items:flex-start;flex-direction:column;padding:11px 12px}.generation-group-heading strong{font-size:13px}.generation-group-schedule .generated-schedule th,.generation-group-schedule .generated-schedule td{padding:7px 5px}.generation-group-schedule .generated-schedule td strong,.generation-group-schedule .generated-schedule th strong{font-size:10px}.generation-group-schedule .generated-schedule td small,.generation-group-schedule .generated-schedule th small{font-size:8px}}
+@media(max-width:700px){.generation-group-heading{align-items:flex-start;flex-direction:column;padding:11px 12px}.generation-group-heading strong{font-size:13px}.generation-group-schedule .generated-schedule th,.generation-group-schedule .generated-schedule td{padding:7px 5px}.generation-group-schedule .generated-schedule td strong,.generation-group-schedule .generated-schedule th strong{font-size:10px}.generation-group-schedule .generated-schedule td small,.generation-group-schedule .generated-schedule th small{font-size:8px}}
 
 
 /* === Horarios: filtros por grupos/docentes === */
@@ -2137,7 +2138,8 @@ button.btn:disabled:hover{
 .proposal-recommendation{display:flex;gap:8px;align-items:flex-start;padding:11px 13px;border-top:1px solid var(--border);background:#f8fbf5;font-size:8.8px;line-height:1.45;color:var(--muted)}
 .proposal-recommendation svg{color:var(--green);flex:0 0 auto}
 
-.generation-view-toolbar{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.generation-view-toolbar{display:block;gap:0}
+.generation-filter-stack{display:flex;flex-direction:column;align-items:flex-start;gap:0;min-width:0;width:100%}
 .generation-view-switch{display:flex;gap:5px;margin-top:6px}
 .generation-view-switch button{border:1px solid var(--border);background:var(--surface);color:var(--muted);border-radius:8px;padding:7px 10px;font-size:8px;font-weight:850;cursor:pointer}
 .generation-view-switch button.active{background:#edf6e7;color:#4b8b24;border-color:#aad18c}
@@ -2284,17 +2286,12 @@ button.btn:disabled:hover{
 
 
 /* === Contextual filter views === */
-.context-filter-panel{border-bottom:1px solid var(--border);background:color-mix(in srgb,var(--surface) 94%,var(--table-head,#f8fafc) 6%)}
-.context-filter-view{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:12px 16px 4px}
-.context-filter-view .generation-view-switch{margin-top:0}
-.context-filter-panel .assignment-filter-row,
-.context-filter-panel .spaces-filter-row{border-bottom:0;padding:6px 0 10px}
-.context-filter-panel .assignment-filter-row{padding-left:16px;padding-right:16px}
 .operations-page.separated-sections{display:flex;flex-direction:column;gap:16px}
 .operations-page.separated-sections>.empty-state-card,
 .operations-page.separated-sections>.groups-table-card,
 .operations-page.separated-sections>.operational-preview-card{margin:0}
 .operations-reference-state{flex:0 0 auto}
-@media(max-width:700px){
-  .context-filter-view{align-items:flex-start;flex-direction:column}
-}
+
+
+.generation-filter-stack>.generation-view-switch{margin-top:6px}
+.generation-filter-stack>.generation-group-tags{margin-top:8px}

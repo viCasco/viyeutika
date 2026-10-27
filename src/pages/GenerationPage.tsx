@@ -726,34 +726,22 @@ export function GenerationPage({
           </div>}
 
           <div className="generation-toolbar generation-view-toolbar">
-            <div>
-              <span className="panel-kicker">Vista</span>
+            <div className="generation-filter-stack">
+              <span className="panel-kicker">Filtro</span>
               <div className="generation-view-switch">
                 <button type="button" className={viewMode==='center'?'active':''} onClick={()=>setViewMode('center')}>Centro</button>
                 <button type="button" className={viewMode==='group'?'active':''} onClick={()=>setViewMode('group')}>Por grupo</button>
                 <button type="button" className={viewMode==='teacher'?'active':''} onClick={()=>setViewMode('teacher')}>Por docente</button>
               </div>
-            </div>
-          </div>
-
-          {viewMode==='group'&&<div className="generation-toolbar generation-toolbar-tags">
-            <div>
-              <span className="panel-kicker">Grupos</span>
-              <div className="generation-group-tags">
+              {viewMode==='group'&&<div className="generation-group-tags">
                 <button type="button" className={selectedGroupIds.includes('all')?'active':''} onClick={()=>toggleGroup('all')}>Todos</button>
                 {activeGroups.map(group=><button key={group.id} type="button" className={!selectedGroupIds.includes('all')&&selectedGroupIds.includes(group.id)?'active':''} onClick={()=>toggleGroup(group.id)}>{group.name}</button>)}
-              </div>
-            </div>
-          </div>}
-
-          {viewMode==='teacher'&&<div className="generation-toolbar generation-toolbar-tags">
-            <div>
-              <span className="panel-kicker">Docentes</span>
-              <div className="generation-group-tags">
+              </div>}
+              {viewMode==='teacher'&&<div className="generation-group-tags">
                 {activeTeachers.map(teacher=><button key={teacher.id} type="button" className={selectedTeacherId===teacher.id?'active':''} onClick={()=>setSelectedTeacherId(teacher.id)}>{teacher.name}</button>)}
-              </div>
+              </div>}
             </div>
-          </div>}
+          </div>
 
           {comparisonRun&&selectedRun.id!==comparisonRun.id&&<div className="generation-diff-legend">
             <span className="diff-swatch"/>
