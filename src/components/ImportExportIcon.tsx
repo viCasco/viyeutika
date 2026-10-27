@@ -14,9 +14,8 @@ export function ImportExportIcon({size=24,...props}:SVGProps<SVGSVGElement>&{siz
     aria-hidden="true"
     {...props}
   >
-    <path d="M10 2h8a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2h-8"/>
-    <path d="M10 2v6H4"/>
-    <path d="M10 2 4 8v2"/>
+    <path d="M8 2h6l6 6v12a2 2 0 0 1-2 2H8"/>
+    <path d="M14 2v6h6"/>
     <path d="M15 13H5"/>
     <path d="m8 10-3 3 3 3"/>
     <path d="M5 19h10"/>
