@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  ArrowUpToLine, CheckCircle2, Eye, FileInput, FileJson,
+  ArrowUpToLine, CheckCircle2, Eye, FileInput, FileJson, FileOutput,
   FileSpreadsheet, ShieldAlert, Trash2, TriangleAlert,
 } from 'lucide-react'
 import {
@@ -24,6 +24,7 @@ import { normalizeProjectData } from '../domain/projectNormalizer'
 import { AppModal } from '../components/AppModal'
 import { ExportPage } from './ExportPage'
 import { BulkEditPage } from './BulkEditPage'
+import { ImportExportIcon } from '../components/ImportExportIcon'
 import {
   deleteStoredTemplateFile,
   loadStoredTemplateFiles,
@@ -152,7 +153,7 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
   return <div className="project-import-page">
     <section className="wizard-intro">
       <div>
-        <h1 className="wizard-page-title"><FileInput size={28}/> Importar | Exportar</h1>
+        <h1 className="wizard-page-title"><ImportExportIcon size={28}/> Importar | Exportar</h1>
         <p>Importa archivos, pega datos masivamente o exporta horarios, informes y respaldos desde un único módulo. Proyecto actual: <strong>{project.center.name||'sin centro configurado'}</strong>.</p>
       </div>
     </section>
@@ -160,7 +161,7 @@ export function ProjectImportPage({project,navigate}:{project:ViyeuticaProject;n
     <section className="import-export-workspace-tabs" aria-label="Importar, pegar datos o exportar">
       <button type="button" className={workspace==='import'?'active':''} onClick={()=>setWorkspace('import')}><FileInput size={16}/> Importar archivos</button>
       <button type="button" className={workspace==='bulk'?'active':''} onClick={()=>setWorkspace('bulk')}><FileSpreadsheet size={16}/> Pegado masivo</button>
-      <button type="button" className={workspace==='export'?'active':''} onClick={()=>setWorkspace('export')}><ArrowUpToLine size={16}/> Exportar</button>
+      <button type="button" className={workspace==='export'?'active':''} onClick={()=>setWorkspace('export')}><FileOutput size={16}/> Exportar</button>
     </section>
 
     {workspace==='import'&&<>

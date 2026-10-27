@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  FileInput, FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose,
+  FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
 import { PlaceholderPage } from './components/PlaceholderPage'
 import { ThemeToggle } from './components/ThemeToggle'
+import { ImportExportIcon } from './components/ImportExportIcon'
 import { Dashboard } from './pages/Dashboard'
 import { SetupWizard } from './pages/SetupWizard'
 import { GroupsPage } from './pages/GroupsPage'
@@ -25,7 +26,7 @@ import { useTheme } from './hooks/useTheme'
 const navigation = [
   { path: '/', label: 'Inicio', icon: Home },
   { path: '/normativa', label: 'Normativa', icon: FileSearch },
-  { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
+  { path: '/proyecto-json', label: 'Importar | Exportar', icon: ImportExportIcon },
   { path: '/centro', label: 'Centro', icon: GraduationCap },
   { path: '/grupos', label: 'Estructura y grupos', icon: LayoutGrid },
   { path: '/jornada', label: 'Jornada y sesiones', icon: CalendarClock },
