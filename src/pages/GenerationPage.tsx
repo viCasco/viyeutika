@@ -27,7 +27,7 @@ import {
 } from '../store/generationUndoStorage'
 import { WizardStepper } from '../components/WizardStepper'
 import { AppModal } from '../components/AppModal'
-import { assignmentLabel, prepareScheduleEntryChange } from '../domain/scheduleEditing'
+import { assignmentLabel, prepareScheduleEntryChange, previewScheduleEntryChange } from '../domain/scheduleEditing'
 import { recommendedRun, scheduleCellState, scheduleMetrics } from '../domain/scheduleMetrics'
 
 type GenerationAlternativeAction =
@@ -964,14 +964,26 @@ function SchedulePreview({
   locks:ViyeuticaProject['scheduleLocks']
 }) {
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
-  return <div className="generation-multi-schedule">
+  const draggedEntry=dragEntryId?run.entries.find(entry=>entry.id===dragEntryId)??null:null
+  return <div className={'generation-multi-schedule '+(draggedEntry?'is-dragging':'')}>
     {groupIds.map(groupId=>{
       const group=project.groups.find(item=>item.id===groupId)
       const entries=run.entries.filter(entry=>entry.groupId===groupId)
-      return <section className="generation-group-schedule" key={groupId}>
+      const isDragGroup=Boolean(draggedEntry&&draggedEntry.groupId===groupId)
+      const isOtherGroup=Boolean(draggedEntry&&!isDragGroup)
+      return <section
+        className={'generation-group-schedule '+(isDragGroup?'schedule-drag-active-group ':'')+(isOtherGroup?'schedule-drag-disabled-group':'')}
+        key={groupId}
+      >
         <div className="generation-group-heading">
           <strong>{group?.name??'Grupo'}</strong>
-          {baselineRun&&run.id!==baselineRun.id&&<small>{groupDifferenceCount(run,baselineRun,groupId)} cambios respecto a Propuesta 1</small>}
+          {isDragGroup
+            ? <small className="schedule-drag-heading">Selecciona una franja verde</small>
+            : isOtherGroup
+              ? <small>Movimiento disponible solo dentro del grupo de origen</small>
+              : baselineRun&&run.id!==baselineRun.id
+                ? <small>{groupDifferenceCount(run,baselineRun,groupId)} cambios respecto a Propuesta 1</small>
+                : null}
         </div>
         <div className="generated-schedule-wrap">
           <table className="generated-schedule">
@@ -984,21 +996,66 @@ function SchedulePreview({
                 const changed=baselineRun&&run.id!==baselineRun.id
                   ? cellDiffersFromBaseline(run,baselineRun,groupId,day,block.id)
                   : false
+
+                const isOrigin=Boolean(
+                  draggedEntry&&isDragGroup&&draggedEntry.day===day&&draggedEntry.sessionId===block.id
+                )
+                const preview=draggedEntry&&isDragGroup&&!isOrigin
+                  ? previewScheduleEntryChange(project,run,{
+                      entryId:draggedEntry.id,
+                      assignmentId:draggedEntry.assignmentId,
+                      day,
+                      sessionId:block.id,
+                    })
+                  : null
+                const state=isOrigin?'origin':preview?.allowed?'valid':preview?'invalid':'idle'
+                const canDrop=state==='valid'
                 const dropProps={
-                  onDragOver:(event:React.DragEvent<HTMLTableCellElement>)=>event.preventDefault(),
-                  onDrop:(event:React.DragEvent<HTMLTableCellElement>)=>{
+                  onDragOver:(event:React.DragEvent<HTMLTableCellElement>)=>{
+                    if(!canDrop)return
                     event.preventDefault()
-                    if(dragEntryId)onDropEntry(dragEntryId,day,block.id)
+                    event.dataTransfer.dropEffect='move'
+                  },
+                  onDrop:(event:React.DragEvent<HTMLTableCellElement>)=>{
+                    if(!canDrop)return
+                    event.preventDefault()
+                    onDropEntry(draggedEntry!.id,day,block.id)
                   },
                 }
-                if(!primary)return <td key={day} {...dropProps} className={'empty-slot schedule-drop-target '+(changed?'proposal-diff-cell':'')}>—</td>
+                const stateClass=state==='valid'
+                  ? ' schedule-drop-valid'
+                  : state==='invalid'
+                    ? ' schedule-drop-invalid'
+                    : state==='origin'
+                      ? ' schedule-drop-origin'
+                      : ''
+                const title=state==='valid'
+                  ? 'Destino disponible'
+                  : state==='invalid'
+                    ? preview?.message
+                    : state==='origin'
+                      ? 'Posición actual'
+                      : undefined
+
+                if(!primary)return <td
+                  key={day}
+                  {...dropProps}
+                  title={title}
+                  className={'empty-slot schedule-drop-target '+(changed?'proposal-diff-cell ':'')+stateClass}
+                >—</td>
+
                 const subject=project.subjects.find(item=>item.id===primary.subjectId)
                 const teachers=cell.map(entry=>project.teachers.find(item=>item.id===entry.teacherId)?.name).filter(Boolean)
-                return <td key={day} {...dropProps} className={(changed?'proposal-diff-cell ':'')+'schedule-edit-cell'}>
+                return <td
+                  key={day}
+                  {...dropProps}
+                  title={title}
+                  className={(changed?'proposal-diff-cell ':'')+'schedule-edit-cell'+stateClass}
+                >
                   <button
                     type="button"
-                    className="schedule-entry-edit"
-                    draggable
+                    className={'schedule-entry-edit '+(dragEntryId===primary.id?'is-being-dragged':'')}
+                    draggable={!draggedEntry||dragEntryId===primary.id}
                     onDragStart={()=>onDragEntry(primary.id)}
                     onDragEnd={()=>onDragEntry('')}
                     onClick={()=>onEdit(primary.id)}
