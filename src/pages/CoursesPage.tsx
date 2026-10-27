@@ -16,9 +16,11 @@ import {
 export function CoursesPage({
   project,
   navigate,
+  embedded=false,
 }:{
   project:ViyeuticaProject
   navigate:(path:string)=>void
+  embedded?:boolean
 }) {
   const [records,setRecords]=useState<CourseRecord[]>([])
   const [showNew,setShowNew]=useState(false)
@@ -99,13 +101,13 @@ export function CoursesPage({
     switchToProject(structuredClone(record.project))
   }
 
-  return <div className="courses-page">
-    <section className="wizard-intro">
+  return <div className={embedded?'courses-page embedded':'courses-page'}>
+    {!embedded&&<section className="wizard-intro">
       <div>
         <h1 className="wizard-page-title"><CalendarDays size={28}/> Curso académico</h1>
         <p>Conserva el histórico del centro por curso y trabaja siempre sobre un único curso activo para evitar mezclar configuraciones, horarios o auditorías de años distintos.</p>
       </div>
-    </section>
+    </section>}
 
     {active&&<section className="course-active-card">
       <div className="course-active-icon"><CheckCircle2 size={24}/></div>

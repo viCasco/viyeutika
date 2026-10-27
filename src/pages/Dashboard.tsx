@@ -1,8 +1,18 @@
+import { useState } from 'react'
 import {
   AlertTriangle, ArrowRight, BookOpenCheck, CalendarClock, CalendarDays, CheckCircle2,
-  Clock3, FileInput, GraduationCap, LayoutGrid, Sparkles, Users,
+  Clock3, FileInput, GraduationCap, Home, LayoutGrid, Sparkles, Users,
 } from 'lucide-react'
 import { isCenterComplete, isStructureComplete, isScheduleComplete, isStudyPlanComplete, isStaffComplete, isAssignmentsComplete, isRulesComplete, isPrevalidationComplete, isGenerationComplete, type ViyeuticaProject } from '../domain/project'
+import { CoursesPage } from './CoursesPage'
+
+function initialDashboardWorkspace(){
+  const raw=window.location.hash.replace(/^#/,'')
+  const [path,query='']=raw.split('?')
+  if(path==='/cursos')return 'courses' as const
+  const params=new URLSearchParams(query)
+  return params.get('tab')==='curso'?'courses' as const:'home' as const
+}
 
 export function Dashboard({
   navigate,
@@ -11,6 +21,13 @@ export function Dashboard({
   navigate:(path:string)=>void
   project: ViyeuticaProject
 }) {
+  const [workspace,setWorkspace]=useState<'home'|'courses'>(initialDashboardWorkspace)
+
+  const switchWorkspace=(next:'home'|'courses')=>{
+    setWorkspace(next)
+    const suffix=next==='courses'?'?tab=curso':''
+    window.history.replaceState(null,'',`#/${suffix}`)
+  }
   const centerDone = isCenterComplete(project.center)
   const structureDone = isStructureComplete(project)
   const scheduleDone = isScheduleComplete(project)
@@ -50,6 +67,12 @@ export function Dashboard({
         : 'Se habilitará al generar un horario completo.'
 
   return <div className="dashboard-stack">
+    <section className="import-export-workspace-tabs" aria-label="Inicio o curso académico">
+      <button type="button" className={workspace==='home'?'active':''} onClick={()=>switchWorkspace('home')}><Home size={16}/> Inicio</button>
+      <button type="button" className={workspace==='courses'?'active':''} onClick={()=>switchWorkspace('courses')}><CalendarDays size={16}/> Curso académico</button>
+    </section>
+
+    {workspace==='home'?<>
     <section className="hero-card">
       <div>
         <span className="eyebrow"><Sparkles size={15}/> ⩒Yeutika 0.4</span>
@@ -146,6 +169,7 @@ export function Dashboard({
         </article>
       </div>
     </section>
+    </>:<CoursesPage project={project} navigate={navigate} embedded/>}
   </div>
 }
 

@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  FileInput, FileSearch, Gauge, GraduationCap, LayoutGrid, Menu, PanelLeftClose,
+  FileInput, FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
 import { PlaceholderPage } from './components/PlaceholderPage'
 import { ThemeToggle } from './components/ThemeToggle'
 import { Dashboard } from './pages/Dashboard'
-import { CoursesPage } from './pages/CoursesPage'
 import { SetupWizard } from './pages/SetupWizard'
 import { GroupsPage } from './pages/GroupsPage'
 import { SchedulePage } from './pages/SchedulePage'
@@ -24,8 +23,7 @@ import { useProject } from './hooks/useProject'
 import { useTheme } from './hooks/useTheme'
 
 const navigation = [
-  { path: '/', label: 'Inicio', icon: Gauge },
-  { path: '/cursos', label: 'Curso académico', icon: CalendarDays },
+  { path: '/', label: 'Inicio', icon: Home },
   { path: '/normativa', label: 'Normativa', icon: FileSearch },
   { path: '/proyecto-json', label: 'Importar | Exportar', icon: FileInput },
   { path: '/centro', label: 'Centro', icon: GraduationCap },
@@ -40,7 +38,6 @@ const navigation = [
 ]
 
 const descriptions: Record<string,string> = {
-  '/cursos': 'Creación, histórico y estado de los cursos académicos.',
   '/normativa': 'Fuentes normativas, extracción de reglas y revisión antes de aplicar plantillas.',
   '/proyecto-json': 'Importación de plantillas y exportación de horarios, informes y respaldos.',
   '/profesorado': 'Plantilla docente, especialidades, jornadas, cargos y reducciones.',
@@ -55,6 +52,7 @@ const getRoute = () => {
   const normalized = raw.startsWith('/') ? raw : '/' + raw
   const [path]=normalized.split('?')
   if(path==='/configuracion')return '/centro'
+  if(path==='/cursos')return '/'
   if(path==='/generacion')return '/horarios'
   if(path==='/exportaciones'||path==='/edicion-masiva')return '/proyecto-json'
   if(path==='/publicacion')return '/horarios'
@@ -87,7 +85,6 @@ export default function App() {
 
   const renderContent = () => {
     if (route === '/') return <Dashboard navigate={go} project={project}/>
-    if (route === '/cursos') return <CoursesPage project={project} navigate={go}/>
     if (route === '/centro') return <SetupWizard project={project} navigate={go}/>
     if (route === '/grupos') return <GroupsPage project={project} navigate={go}/>
     if (route === '/jornada') return <SchedulePage project={project} navigate={go}/>
@@ -136,7 +133,7 @@ export default function App() {
         <div className="content-area">{renderContent()}</div>
       </main>
       <nav className="mobile-bottom-nav">
-        <button className={route==='/'?'active':''} onClick={() => go('/')}><Gauge size={20}/><span>Inicio</span></button>
+        <button className={route==='/'?'active':''} onClick={() => go('/')}><Home size={20}/><span>Inicio</span></button>
         <button className={route==='/centro'?'active':''} onClick={() => go('/centro')}><GraduationCap size={20}/><span>Centro</span></button>
         <button className={route==='/grupos'?'active':''} onClick={() => go('/grupos')}><LayoutGrid size={20}/><span>Grupos</span></button>
         <button className={route==='/jornada'?'active':''} onClick={() => go('/jornada')}><CalendarClock size={20}/><span>Jornada</span></button>
