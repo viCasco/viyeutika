@@ -56,6 +56,17 @@ describe('transactional schedule editing',()=>{
     expect(result.ok).toBe(false)
   })
 
+  it('rejects swapping identical subject and teacher sessions as a no-op',()=>{
+    const {project,run}=fixture()
+    project.assignments.push({
+      id:'a3',groupId:'g1',subjectId:'m1',teacherId:'t1',assignmentType:'main',weeklySessions:1,weeklyMinutes:60,fixedSlots:[],active:true,
+    })
+    run.entries[1]={...run.entries[1],assignmentId:'a3',subjectId:'m1',teacherId:'t1'}
+    const result=prepareScheduleEntryChange(project,run,{entryId:'e1',assignmentId:'a1',day:'L',sessionId:'s2'})
+    expect(result.ok).toBe(false)
+    expect(result.message).toContain('misma materia y docente')
+  })
+
   it('rejects moving a position locked session',()=>{
     const {project,run}=fixture()
     project.scheduleLocks=[{
