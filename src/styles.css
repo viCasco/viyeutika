@@ -2480,3 +2480,71 @@ button.btn:disabled:hover{
     height:56px;
   }
 }
+
+
+/* === Collapsible group schedules === */
+.schedule-groups-display-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:8px 2px 0;
+  color:var(--muted);
+  font-size:8.5px;
+}
+.schedule-groups-display-actions>div{display:flex;gap:6px;flex-wrap:wrap}
+.schedule-groups-display-actions button{
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--navy2);
+  padding:6px 9px;
+  font-size:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+.schedule-groups-display-actions button:hover:not(:disabled){background:#eef4fb;border-color:#c7d8ea}
+.schedule-groups-display-actions button:disabled{opacity:.45;cursor:not-allowed}
+.generation-group-schedule{overflow:visible}
+.generation-group-schedule.is-collapsed{gap:0}
+.generation-group-heading{
+  position:sticky;
+  top:72px;
+  z-index:12;
+  justify-content:flex-start;
+  min-height:42px;
+}
+.generation-group-collapse{
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  color:var(--muted);
+  cursor:pointer;
+}
+.generation-group-collapse:hover{color:var(--navy2);background:#eef4fb}
+.generation-group-collapse svg{transition:transform .18s ease}
+.generation-group-schedule.is-expanded .generation-group-collapse svg{transform:rotate(0deg)}
+.generation-group-schedule.is-collapsed .generation-group-collapse svg{transform:rotate(-90deg)}
+.generation-group-heading-copy{min-width:0;display:flex;flex-direction:column;gap:2px}
+.generation-group-heading-copy strong,.generation-group-heading-copy small{display:block}
+.generation-group-schedule .generated-schedule-wrap{overflow:visible}
+.generation-group-schedule .generated-schedule thead th{
+  position:sticky;
+  top:114px;
+  z-index:10;
+}
+.generation-group-schedule .generated-schedule thead th:first-child{z-index:11}
+[data-theme="dark"] .generation-group-collapse,
+[data-theme="dark"] .schedule-groups-display-actions button{background:#151d28}
+[data-theme="dark"] .generation-group-collapse:hover,
+[data-theme="dark"] .schedule-groups-display-actions button:hover:not(:disabled){background:#1a2a3d}
+@media(max-width:780px){
+  .generation-group-heading{top:64px}
+  .generation-group-schedule .generated-schedule thead th{top:106px}
+  .schedule-groups-display-actions{align-items:flex-start;flex-direction:column}
+}
