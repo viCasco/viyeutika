@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, ChevronDown, Info, Plus, RefreshCcw, Sparkles,
-  Lock, Pencil, Trash2, Trophy, Undo2, Unlock, XCircle,
+  Lock, Pencil, SquarePen, Trash2, Trophy, Undo2, Unlock, XCircle,
 } from 'lucide-react'
 import {
   emptyGroupTeachingSlots,
@@ -1257,13 +1257,13 @@ function TeacherSchedulePreview({
             const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
             return <button
               type="button"
-              className="schedule-entry-edit"
+              className="schedule-entry-edit schedule-entry-edit-only"
               key={entry.id}
               onClick={()=>onEdit(entry.id)}
               title="Editar sesión"
               aria-label={`Editar ${subject} de ${group}`}
             >
-              <strong>{subject}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><Pencil className="schedule-entry-edit-icon" size={12}/>
+              <strong>{subject}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><SquarePen className="schedule-entry-edit-icon schedule-entry-edit-only-icon" size={13}/>
             </button>
           })}</td>
         })}
