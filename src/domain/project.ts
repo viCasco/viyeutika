@@ -168,7 +168,7 @@ export function normalizeSubjectColors(subjects:Subject[]){
   let changed=false
   const normalized=subjects.map(subject=>{
     const current=subject.color?.toUpperCase()
-    const valid=Boolean(current&&SUBJECT_COLOR_PALETTE.some(item=>item.value.toUpperCase()===current))
+    const valid=Boolean(current&&/^#[0-9A-F]{6}$/.test(current))
     if(valid&&!used.has(current!)){
       used.add(current!)
       if(subject.color===current)return subject
