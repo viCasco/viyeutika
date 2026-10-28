@@ -663,12 +663,20 @@ export function StudyPlanPage({
         </tr></thead><tbody>{displayedEntries.map(entry=>{
           const group=project.groups.find(x=>x.id===entry.groupId)
           const subject=project.subjects.find(x=>x.id===entry.subjectId)
-          return <tr key={entry.id} className={!entry.active?'is-inactive':''}><td><strong>{group?.name??'Grupo eliminado'}</strong></td><td>{subject?.name??'Materia eliminada'}</td><td>{entry.weeklySessions>0?entry.weeklySessions:'—'}</td><td>{entry.weeklyMinutes?formatWeeklyMinutes(entry.weeklyMinutes):'—'}</td><td>{planModeLabel(entry.mode)}</td><td>{teacherRequirementLabel(entry.teacherRequirement)}</td><td>{entry.fixedSessionMinutes?`${entry.fixedSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(entry.active?'active':'')} onClick={()=>toggleEntry(entry.id)}>{entry.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editEntry(entry)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeEntry(entry.id)}><Trash2 size={15}/></button></div></td></tr>
+          return <tr
+            key={entry.id}
+            className={'subject-color-row plan-entry-color-row '+(!entry.active?'is-inactive':'')}
+            style={{'--subject-color':subject?subjectDisplayColor(subject):'#6B7F95'} as CSSProperties}
+          ><td><strong>{group?.name??'Grupo eliminado'}</strong></td><td><span className="subject-name-with-color"><span className="subject-color-dot"/><strong>{subject?.name??'Materia eliminada'}</strong></span></td><td>{entry.weeklySessions>0?entry.weeklySessions:'—'}</td><td>{entry.weeklyMinutes?formatWeeklyMinutes(entry.weeklyMinutes):'—'}</td><td>{planModeLabel(entry.mode)}</td><td>{teacherRequirementLabel(entry.teacherRequirement)}</td><td>{entry.fixedSessionMinutes?`${entry.fixedSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(entry.active?'active':'')} onClick={()=>toggleEntry(entry.id)}>{entry.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editEntry(entry)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeEntry(entry.id)}><Trash2 size={15}/></button></div></td></tr>
         })}</tbody></table></div>:<div className="data-card-grid">{displayedEntries.map(entry=>{
           const group=project.groups.find(x=>x.id===entry.groupId)
           const subject=project.subjects.find(x=>x.id===entry.subjectId)
-          return <article className={'data-record-card '+(!entry.active?'is-inactive':'')} key={entry.id}>
-            <div className="data-record-card-heading"><div><strong>{group?.name??'Grupo eliminado'} · {subject?.name??'Materia eliminada'}</strong><small>{planModeLabel(entry.mode)}</small></div><span className="tag">{entry.weeklySessions>0?`${entry.weeklySessions} ses.`:entry.weeklyMinutes?`${entry.weeklyMinutes} min`:'—'}</span></div>
+          return <article
+            className={'data-record-card subject-color-card plan-entry-color-card '+(!entry.active?'is-inactive':'')}
+            style={{'--subject-color':subject?subjectDisplayColor(subject):'#6B7F95'} as CSSProperties}
+            key={entry.id}
+          >
+            <div className="data-record-card-heading"><div><strong className="subject-card-name"><span className="subject-color-dot"/>{group?.name??'Grupo eliminado'} · {subject?.name??'Materia eliminada'}</strong><small>{planModeLabel(entry.mode)}</small></div><span className="tag">{entry.weeklySessions>0?`${entry.weeklySessions} ses.`:entry.weeklyMinutes?`${entry.weeklyMinutes} min`:'—'}</span></div>
             <div className="data-record-card-data">
               <div><span>Carga semanal</span><strong>{entry.weeklyMinutes?formatWeeklyMinutes(entry.weeklyMinutes):entry.weeklySessions>0?`${entry.weeklySessions} sesiones`:'—'}</strong></div>
               <div><span>Requisito docente</span><strong>{teacherRequirementLabel(entry.teacherRequirement)}</strong></div>
