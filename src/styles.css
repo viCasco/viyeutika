@@ -2670,12 +2670,10 @@ button.btn:disabled:hover{
 
 
 /* === Sticky schedule filter dock === */
-.generation-filter-sentinel{height:1px;margin-top:-1px}
 .generation-filter-dock{
-  position:sticky;
+  position:fixed;
   top:72px;
   z-index:24;
-  height:0;
   overflow:visible;
   pointer-events:none;
   opacity:0;
@@ -2686,6 +2684,7 @@ button.btn:disabled:hover{
   visibility:visible;
 }
 .generation-filter-dock-inner{
+  width:100%;
   min-height:44px;
   display:flex;
   align-items:center;
