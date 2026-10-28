@@ -2667,3 +2667,78 @@ button.btn:disabled:hover{
   .wizard-stepper-expand{justify-content:center}
   .generation-result-compact-metrics{gap:4px}
 }
+
+
+/* === Sticky schedule filter dock === */
+.generation-filter-sentinel{height:1px;margin-top:-1px}
+.generation-filter-dock{
+  position:sticky;
+  top:72px;
+  z-index:24;
+  height:0;
+  overflow:visible;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+}
+.generation-filter-dock.is-visible{
+  opacity:1;
+  visibility:visible;
+}
+.generation-filter-dock-inner{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:5px 10px;
+  border:1px solid var(--border);
+  border-radius:0 0 10px 10px;
+  background:rgba(255,255,255,.97);
+  box-shadow:0 8px 18px rgba(18,42,74,.08);
+  backdrop-filter:blur(14px);
+  pointer-events:auto;
+}
+.generation-filter-dock-label{
+  flex:0 0 auto;
+  color:var(--muted);
+  font-size:8px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.generation-filter-dock .generation-view-switch{
+  flex:0 0 auto;
+  margin-top:0;
+}
+.generation-filter-dock .generation-view-switch button{
+  padding:5px 8px;
+  font-size:7.5px;
+}
+.generation-filter-dock-tags{
+  min-width:0;
+  flex:1 1 auto;
+  flex-wrap:nowrap!important;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:thin;
+  padding-bottom:1px;
+}
+.generation-filter-dock-tags button{
+  flex:0 0 auto;
+  padding:5px 8px;
+  font-size:7.4px;
+}
+.generation-result.has-filter-dock .generation-group-heading{top:116px}
+.generation-result.has-filter-dock .generation-group-schedule .generated-schedule thead th{top:158px}
+[data-theme="dark"] .generation-filter-dock-inner{
+  background:rgba(21,29,40,.97);
+}
+@media(max-width:780px){
+  .generation-filter-dock{top:64px}
+  .generation-filter-dock-inner{min-height:42px;padding:4px 7px;gap:6px}
+  .generation-filter-dock-label{display:none}
+  .generation-filter-dock .generation-view-switch button,
+  .generation-filter-dock-tags button{padding:5px 7px;font-size:7.2px}
+  .generation-result.has-filter-dock .generation-group-heading{top:106px}
+  .generation-result.has-filter-dock .generation-group-schedule .generated-schedule thead th{top:148px}
+}
