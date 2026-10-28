@@ -103,7 +103,32 @@ export interface Subject {
   stage: EducationStage
   type: SubjectType
   defaultSessionMinutes: number | null
+  /** Optional user-selected accent used to identify the subject visually in timetables. */
+  color?: string | null
   active: boolean
+}
+
+export const SUBJECT_COLOR_PALETTE = [
+  {value:'#4F7CAC',label:'Azul'},
+  {value:'#5B8C6A',label:'Verde'},
+  {value:'#8A6BBE',label:'Violeta'},
+  {value:'#B36B4F',label:'Terracota'},
+  {value:'#B58A28',label:'Mostaza'},
+  {value:'#3F8C8C',label:'Turquesa'},
+  {value:'#A15C7E',label:'Rosa'},
+  {value:'#6F7F3F',label:'Oliva'},
+  {value:'#6A76B8',label:'Índigo'},
+  {value:'#B66A8E',label:'Malva'},
+  {value:'#537A9A',label:'Azul gris'},
+  {value:'#8C6F4E',label:'Tierra'},
+] as const
+
+export function subjectDisplayColor(subject:Pick<Subject,'id'|'name'|'code'|'color'>){
+  if(subject.color&&/^#[0-9a-f]{6}$/i.test(subject.color))return subject.color.toUpperCase()
+  const source=(subject.code||subject.name||subject.id).toLowerCase()
+  let hash=0
+  for(let index=0;index<source.length;index++)hash=((hash<<5)-hash+source.charCodeAt(index))|0
+  return SUBJECT_COLOR_PALETTE[Math.abs(hash)%SUBJECT_COLOR_PALETTE.length].value
 }
 
 export interface StudyPlanEntry {
