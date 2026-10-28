@@ -2050,7 +2050,33 @@ button.btn:disabled:hover{
 .schedule-entry-edit strong,.schedule-entry-edit small{display:block}
 .schedule-entry-edit strong{font-size:9.5px}
 .schedule-entry-edit small{margin-top:3px;color:var(--muted);font-size:8px}
-.schedule-entry-edit svg{position:absolute;right:6px;top:7px;color:var(--muted);opacity:.7}
+.schedule-entry-edit-icon{
+  position:absolute;
+  right:6px;
+  top:7px;
+  color:var(--muted);
+  opacity:0;
+  transform:translateY(-1px);
+  transition:opacity .14s ease,transform .14s ease,color .14s ease;
+  pointer-events:none;
+}
+.schedule-entry-edit:hover .schedule-entry-edit-icon,
+.schedule-entry-edit:focus-visible .schedule-entry-edit-icon{
+  opacity:1;
+  transform:translateY(0);
+  color:var(--navy2);
+}
+.schedule-entry-edit:focus-visible{
+  outline:2px solid #6d9bc8;
+  outline-offset:-2px;
+  border-radius:6px;
+}
+@media(hover:none),(pointer:coarse){
+  .schedule-entry-edit-icon{
+    opacity:.72;
+    transform:none;
+  }
+}
 .schedule-edit-cell:hover,.schedule-drop-target:hover{outline:2px solid color-mix(in srgb,var(--green) 35%,transparent);outline-offset:-2px}
 .generation-multi-schedule.is-dragging .schedule-edit-cell:hover,
 .generation-multi-schedule.is-dragging .schedule-drop-target:hover{outline:0}
