@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, ChevronDown, Info, Plus, RefreshCcw, Sparkles,
   Lock, Pencil, Trash2, Trophy, Undo2, Unlock, XCircle,
@@ -84,6 +84,8 @@ export function GenerationPage({
   const [editLockMode,setEditLockMode]=useState<ScheduleLockMode|'none'>('none')
   const [dragEntryId,setDragEntryId]=useState('')
   const [resultDetailsExpanded,setResultDetailsExpanded]=useState(false)
+  const [filterDocked,setFilterDocked]=useState(false)
+  const filterSentinelRef=useRef<HTMLDivElement|null>(null)
   const [alternativeSimulation,setAlternativeSimulation]=useState<Record<string,{
     valid:boolean
     emptySlots:number
@@ -137,6 +139,20 @@ export function GenerationPage({
   useEffect(()=>{
     setResultDetailsExpanded(Boolean(selectedRun&&selectedRun.status!=='complete'))
   },[selectedRun?.id,selectedRun?.status])
+
+  useEffect(()=>{
+    const sentinel=filterSentinelRef.current
+    if(!sentinel||typeof IntersectionObserver==='undefined'){
+      setFilterDocked(false)
+      return
+    }
+    const observer=new IntersectionObserver(([entry])=>{
+      const top=entry.boundingClientRect.top
+      setFilterDocked(!entry.isIntersecting&&top<72)
+    },{rootMargin:'-72px 0px 0px 0px',threshold:0})
+    observer.observe(sentinel)
+    return ()=>observer.disconnect()
+  },[selectedRun?.id])
 
   const openScheduleEditor=(entryId:string,target?:{day:Weekday;sessionId:string})=>{
     if(!selectedRun)return
@@ -688,7 +704,7 @@ export function GenerationPage({
           {recommended&&<div className="proposal-recommendation"><Trophy size={17}/><span><strong>Propuesta recomendada: {runs.findIndex(run=>run.id===recommended.run.id)+1}.</strong> Se prioriza validez, menor penalización SOFT, menos huecos docentes, menos jornadas fragmentadas y, cuando existe referencia, menos cambios. La elección sigue siendo manual.</span></div>}
         </section>}
 
-        {selectedRun&&<section className="generation-result">
+        {selectedRun&&<section className={'generation-result '+(filterDocked?'has-filter-dock':'')}>
           <div className={'generation-result-heading '+(resultDetailsExpanded?'is-expanded':'is-collapsed')}>
             <div className="generation-result-heading-copy">
               <span className="panel-kicker">Resultado seleccionado</span>
@@ -752,6 +768,24 @@ export function GenerationPage({
             </div>}
           </>}
 
+          <div ref={filterSentinelRef} className="generation-filter-sentinel" aria-hidden="true"/>
+          <div className={'generation-filter-dock '+(filterDocked?'is-visible':'')} aria-hidden={!filterDocked}>
+            <div className="generation-filter-dock-inner">
+              <span className="generation-filter-dock-label">Filtro</span>
+              <div className="generation-view-switch">
+                <button type="button" className={viewMode==='center'?'active':''} onClick={()=>setViewMode('center')}>Centro</button>
+                <button type="button" className={viewMode==='group'?'active':''} onClick={()=>setViewMode('group')}>Por grupo</button>
+                <button type="button" className={viewMode==='teacher'?'active':''} onClick={()=>setViewMode('teacher')}>Por docente</button>
+              </div>
+              {viewMode==='group'&&<div className="generation-group-tags generation-filter-dock-tags">
+                <button type="button" className={selectedGroupIds.includes('all')?'active':''} onClick={()=>toggleGroup('all')}>Todos</button>
+                {activeGroups.map(group=><button key={'dock-'+group.id} type="button" className={!selectedGroupIds.includes('all')&&selectedGroupIds.includes(group.id)?'active':''} onClick={()=>toggleGroup(group.id)}>{group.name}</button>)}
+              </div>}
+              {viewMode==='teacher'&&<div className="generation-group-tags generation-filter-dock-tags">
+                {activeTeachers.map(teacher=><button key={'dock-'+teacher.id} type="button" className={selectedTeacherId===teacher.id?'active':''} onClick={()=>setSelectedTeacherId(teacher.id)}>{teacher.name}</button>)}
+              </div>}
+            </div>
+          </div>
           <div className="generation-toolbar generation-view-toolbar">
             <div className="generation-filter-stack">
               <span className="panel-kicker">Filtro</span>
