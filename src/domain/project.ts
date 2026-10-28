@@ -121,6 +121,30 @@ export const SUBJECT_COLOR_PALETTE = [
   {value:'#B66A8E',label:'Malva'},
   {value:'#537A9A',label:'Azul gris'},
   {value:'#8C6F4E',label:'Tierra'},
+  {value:'#3D73A8',label:'Azul océano'},
+  {value:'#3F8F72',label:'Verde jade'},
+  {value:'#7C66A8',label:'Lavanda'},
+  {value:'#A8654A',label:'Arcilla'},
+  {value:'#A57C23',label:'Ocre'},
+  {value:'#35827F',label:'Petróleo'},
+  {value:'#985A7A',label:'Frambuesa'},
+  {value:'#71833D',label:'Musgo'},
+  {value:'#5968A8',label:'Azul lavanda'},
+  {value:'#9E6385',label:'Orquídea'},
+  {value:'#4D748C',label:'Acero'},
+  {value:'#826447',label:'Cobre'},
+  {value:'#477F93',label:'Azul turquesa'},
+  {value:'#62804D',label:'Verde bosque'},
+  {value:'#7A5F8E',label:'Ciruela'},
+  {value:'#A0605F',label:'Coral oscuro'},
+  {value:'#9A762F',label:'Ámbar'},
+  {value:'#4D8076',label:'Verde agua'},
+  {value:'#8A5F77',label:'Rosa viejo'},
+  {value:'#687B4D',label:'Salvia'},
+  {value:'#5C6E96',label:'Azul pizarra'},
+  {value:'#8D667C',label:'Malva gris'},
+  {value:'#587384',label:'Gris azulado'},
+  {value:'#78644F',label:'Topo'},
 ] as const
 
 export function subjectDisplayColor(subject:Pick<Subject,'id'|'name'|'code'|'color'>){
@@ -129,6 +153,34 @@ export function subjectDisplayColor(subject:Pick<Subject,'id'|'name'|'code'|'col
   let hash=0
   for(let index=0;index<source.length;index++)hash=((hash<<5)-hash+source.charCodeAt(index))|0
   return SUBJECT_COLOR_PALETTE[Math.abs(hash)%SUBJECT_COLOR_PALETTE.length].value
+}
+
+export function firstAvailableSubjectColor(subjects:Subject[],excludeSubjectId?:string|null){
+  const used=new Set(subjects
+    .filter(subject=>subject.id!==excludeSubjectId)
+    .map(subject=>subject.color?.toUpperCase())
+    .filter((color):color is string=>Boolean(color)))
+  return SUBJECT_COLOR_PALETTE.find(item=>!used.has(item.value.toUpperCase()))?.value ?? null
+}
+
+export function normalizeSubjectColors(subjects:Subject[]){
+  const used=new Set<string>()
+  let changed=false
+  const normalized=subjects.map(subject=>{
+    const current=subject.color?.toUpperCase()
+    const valid=Boolean(current&&SUBJECT_COLOR_PALETTE.some(item=>item.value.toUpperCase()===current))
+    if(valid&&!used.has(current!)){
+      used.add(current!)
+      if(subject.color===current)return subject
+      changed=true
+      return {...subject,color:current}
+    }
+    const next=SUBJECT_COLOR_PALETTE.find(item=>!used.has(item.value.toUpperCase()))?.value ?? null
+    if(next)used.add(next.toUpperCase())
+    if((subject.color??null)!==next)changed=true
+    return {...subject,color:next}
+  })
+  return {subjects:normalized,changed}
 }
 
 export interface StudyPlanEntry {
