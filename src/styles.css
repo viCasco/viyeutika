@@ -492,8 +492,10 @@ button.wizard-step:focus-visible{outline:3px solid rgba(89,180,17,.22);outline-o
 .generation-empty{display:grid;place-items:center;text-align:center;padding:42px 20px;background:var(--surface);border:1px dashed var(--border);border-radius:18px}.generation-empty>svg{color:var(--navy2)}.generation-empty h2{margin:10px 0 4px;font-size:16px}.generation-empty p{margin:0;color:var(--muted);font-size:9.5px}
 .generation-history,.generation-result{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
 .generation-run-list{display:grid;gap:8px;padding:12px 16px 16px}
-.generation-run-card{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;text-align:left;padding:11px 12px;border:1px solid var(--border);border-radius:11px;background:var(--surface);color:inherit;cursor:pointer}
-.generation-run-card.selected{border-color:#87b8df;box-shadow:0 0 0 2px rgba(70,134,190,.1)}.generation-run-card.complete>svg{color:var(--green2)}.generation-run-card.partial>svg{color:#d2a22f}.generation-run-card.failed>svg{color:#c6534d}
+.generation-run-card-wrap{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:stretch;border:1px solid var(--border);border-radius:11px;background:var(--surface);overflow:hidden}
+.generation-run-card-wrap.selected{border-color:#87b8df;box-shadow:0 0 0 2px rgba(70,134,190,.1)}
+.generation-run-card-main{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;min-width:0;text-align:left;padding:11px 12px;border:0;background:transparent;color:inherit;cursor:pointer}
+.generation-run-card-wrap.complete .generation-run-card-main>svg{color:var(--green2)}.generation-run-card-wrap.partial .generation-run-card-main>svg{color:#d2a22f}.generation-run-card-wrap.failed .generation-run-card-main>svg{color:#c6534d}
 .generation-run-main strong,.generation-run-main small{display:block}.generation-run-main strong{font-size:10.5px}.generation-run-main strong em{margin-left:6px;padding:2px 5px;border-radius:999px;background:#edf7e7;color:#4d8a2a;font-style:normal;font-size:7.5px}.generation-run-main small{margin-top:3px;color:var(--muted);font-size:8.5px}
 .generation-run-score{font-size:14px;font-weight:900}
 .generation-result-heading{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 18px;border-bottom:1px solid var(--border)}.generation-result-heading h2{margin:3px 0 2px;font-size:16px}.generation-result-heading p{margin:0;color:var(--muted);font-size:8.5px}
@@ -2749,3 +2751,28 @@ button.btn:disabled:hover{
 .schedule-entry-edit-only .schedule-entry-edit-only-icon{color:#5f7896}
 .schedule-entry-edit-only:hover .schedule-entry-edit-only-icon,
 .schedule-entry-edit-only:focus-visible .schedule-entry-edit-only-icon{color:#245b8e}
+
+
+/* === Saved schedules versus proposals === */
+.generation-saved-schedules{display:grid;gap:8px;padding:12px 16px 16px}
+.generation-saved-empty{display:flex;align-items:center;gap:8px;padding:12px;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:8.8px}
+.generation-proposals-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px 0;border-top:1px solid var(--border)}
+.generation-proposals-heading h3{margin:3px 0 0;font-size:14px}
+.generation-run-discard{
+  width:42px;
+  border:0;
+  border-left:1px solid var(--border);
+  background:transparent;
+  color:#a04a45;
+  display:grid;
+  place-items:center;
+  cursor:pointer;
+}
+.generation-run-discard:hover{background:#fff1f0;color:#b53b34}
+.generation-result-title-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.generation-result-title-row h2{margin:0}
+.discard-draft-copy{display:grid;gap:10px}
+.discard-draft-copy p{margin:0;color:var(--muted);font-size:9.5px;line-height:1.5}
+.btn.danger{background:#b9433d;color:#fff;border-color:#b9433d}
+.btn.danger:hover{background:#a83833;border-color:#a83833}
+[data-theme="dark"] .generation-run-discard:hover{background:#301c1b}
