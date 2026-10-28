@@ -1,4 +1,4 @@
-import { EMPTY_PROJECT, type ViyeuticaProject } from '../domain/project'
+import { EMPTY_PROJECT, normalizeSubjectColors, type ViyeuticaProject } from '../domain/project'
 
 const STORAGE_KEY = 'viyeutica.project.v1'
 export const PROJECT_UPDATED_EVENT = 'viyeutica:project-updated'
@@ -40,13 +40,14 @@ export function loadProject(): ViyeuticaProject {
       typeof parsed.establishedScheduleSavedAt==='string'
         ? parsed.establishedScheduleSavedAt
         : null
-    return {
+    const normalizedSubjects=normalizeSubjectColors(Array.isArray(parsed.subjects) ? parsed.subjects : [])
+    const loadedProject={
       ...structuredClone(EMPTY_PROJECT),
       ...parsed,
       center: { ...structuredClone(EMPTY_PROJECT.center), ...(parsed.center ?? {}) },
       academicYear: { ...EMPTY_PROJECT.academicYear, ...(parsed.academicYear ?? {}) },
       groups: Array.isArray(parsed.groups) ? parsed.groups : [],
-      subjects: Array.isArray(parsed.subjects) ? parsed.subjects : [],
+      subjects: normalizedSubjects.subjects,
       studyPlan: Array.isArray(parsed.studyPlan) ? parsed.studyPlan : [],
       teachers: Array.isArray(parsed.teachers)
         ? parsed.teachers.map(teacher=>({...teacher,dedications:Array.isArray(teacher.dedications)?teacher.dedications:[]}))
@@ -78,6 +79,10 @@ export function loadProject(): ViyeuticaProject {
         blocks: Array.isArray(parsed.schedule?.blocks) ? parsed.schedule!.blocks : [],
       },
     }
+    if(normalizedSubjects.changed){
+      window.localStorage.setItem(STORAGE_KEY,JSON.stringify(loadedProject))
+    }
+    return loadedProject
   } catch {
     return structuredClone(EMPTY_PROJECT)
   }
@@ -126,7 +131,8 @@ export function saveProject(
   options:{intent?:ProjectSaveIntent;preserveGeneration?:boolean}={},
 ) {
   const intent=options.intent ?? (options.preserveGeneration ? 'replace_project' : 'configuration')
-  let nextProject=project
+  const normalizedSubjects=normalizeSubjectColors(project.subjects)
+  let nextProject=normalizedSubjects.changed?{...project,subjects:normalizedSubjects.subjects}:project
 
   if(intent==='configuration'){
     try{
