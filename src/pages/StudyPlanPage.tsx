@@ -3,6 +3,7 @@ import {
   BookOpen, CheckCircle2, ChevronDown, Copy, GraduationCap, Pencil, Plus, Save, Trash2,
 } from 'lucide-react'
 import {
+  firstAvailableSubjectColor,
   isStructureComplete,
   SUBJECT_COLOR_PALETTE,
   subjectDisplayColor,
@@ -189,7 +190,17 @@ export function StudyPlanPage({
     setEntryError('')
     setEntryModalOpen(false)
   }
-  const openSubjectCreate=()=>{setSubjectDraft(emptySubject);setEditingSubject(null);setSubjectError('');setSubjectModalOpen(true)}
+  const openSubjectCreate=()=>{
+    const color=firstAvailableSubjectColor(project.subjects)
+    if(!color){
+      setSubjectError('No quedan colores libres en la paleta. Elimina una materia o libera uno de sus colores antes de crear otra.')
+      return
+    }
+    setSubjectDraft({...emptySubject,color})
+    setEditingSubject(null)
+    setSubjectError('')
+    setSubjectModalOpen(true)
+  }
   const openEntryCreate=()=>{setEntryDraft(emptyEntry);setEditingEntry(null);setEntryError('');setEntryModalOpen(true)}
 
   const applyTemplate=(kind:'infantil'|'primaria')=>{
@@ -219,6 +230,19 @@ export function StudyPlanPage({
       setSubjectError('Ya existe una materia con ese nombre en la misma etapa.')
       return
     }
+    const selectedColor=subjectDraft.color||firstAvailableSubjectColor(project.subjects,editingSubject)
+    if(!selectedColor){
+      setSubjectError('Selecciona un color disponible para la materia.')
+      return
+    }
+    const colorInUse=project.subjects.some(subject=>
+      subject.id!==editingSubject &&
+      subject.color?.toUpperCase()===selectedColor.toUpperCase()
+    )
+    if(colorInUse){
+      setSubjectError('Ese color ya está asignado a otra materia. Selecciona uno disponible.')
+      return
+    }
 
     const subject:Subject={
       id:editingSubject??uid('sub'),
@@ -227,7 +251,7 @@ export function StudyPlanPage({
       stage:subjectDraft.stage,
       type:subjectDraft.type,
       defaultSessionMinutes:subjectDraft.defaultSessionMinutes===''?null:Math.max(1,Number(subjectDraft.defaultSessionMinutes)),
-      color:subjectDraft.color||null,
+      color:selectedColor,
       active:true,
     }
     const next=editingSubject
@@ -245,7 +269,7 @@ export function StudyPlanPage({
       stage:subject.stage,
       type:subject.type,
       defaultSessionMinutes:subject.defaultSessionMinutes===null?'':String(subject.defaultSessionMinutes),
-      color:subject.color??'',
+      color:subject.color??firstAvailableSubjectColor(project.subjects,subject.id)??'',
     })
     setSubjectError('')
     setSubjectModalOpen(true)
@@ -434,19 +458,26 @@ export function StudyPlanPage({
             <div className="subject-color-field">
               <span>Color en horarios</span>
               <div className="subject-color-palette" role="group" aria-label="Color de la materia">
-                <button type="button" className={'subject-color-auto '+(subjectDraft.color===''?'selected':'')} aria-pressed={subjectDraft.color===''} onClick={()=>setSubjectDraft({...subjectDraft,color:''})}>Automático</button>
-                {SUBJECT_COLOR_PALETTE.map(item=><button
-                  type="button"
-                  key={item.value}
-                  className={'subject-color-swatch '+(subjectDraft.color===item.value?'selected':'')}
-                  style={{'--subject-color':item.value} as CSSProperties}
-                  aria-label={item.label}
-                  title={item.label}
-                  aria-pressed={subjectDraft.color===item.value}
-                  onClick={()=>setSubjectDraft({...subjectDraft,color:item.value})}
-                />)}
+                {SUBJECT_COLOR_PALETTE.map(item=>{
+                  const usedBy=project.subjects.find(subject=>
+                    subject.id!==editingSubject &&
+                    subject.color?.toUpperCase()===item.value.toUpperCase()
+                  )
+                  const selected=subjectDraft.color.toUpperCase()===item.value.toUpperCase()
+                  return <button
+                    type="button"
+                    key={item.value}
+                    className={'subject-color-swatch '+(selected?'selected ':'')+(usedBy?'is-used':'')}
+                    style={{'--subject-color':item.value} as CSSProperties}
+                    aria-label={usedBy?`${item.label}, usado por ${usedBy.name}`:item.label}
+                    title={usedBy?`${item.label} · Usado por ${usedBy.name}`:item.label}
+                    aria-pressed={selected}
+                    disabled={Boolean(usedBy)}
+                    onClick={()=>setSubjectDraft({...subjectDraft,color:item.value})}
+                  />
+                })}
               </div>
-              <small>Se usa como acento visual suave en Horarios. El texto mantiene contraste alto.</small>
+              <small>Los colores ocupados aparecen deshabilitados. Cada materia utiliza un color exclusivo en Horarios.</small>
             </div>
           </div>
           {subjectError&&<div className="inline-error">{subjectError}</div>}
@@ -507,8 +538,12 @@ export function StudyPlanPage({
           <SortableTh label="Duración" sortKey="duration" state={subjectsSort} onSort={setSubjectsSort}/>
           <SortableTh label="Estado" sortKey="active" state={subjectsSort} onSort={setSubjectsSort}/>
           <th/>
-        </tr></thead><tbody>{displayedSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><span className="subject-name-with-color"><span className="subject-color-dot" style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}/><strong>{subject.name}</strong></span></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article className={'data-record-card '+(!subject.active?'is-inactive':'')} key={subject.id}>
-          <div className="data-record-card-heading"><div><strong className="subject-card-name"><span className="subject-color-dot" style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}/>{subject.name}</strong><small>{subject.code||'Sin código'} · {subject.stage}</small></div><span className="tag">{subjectTypeLabel(subject.type)}</span></div>
+        </tr></thead><tbody>{displayedSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><span className="subject-name-with-color"><span className="subject-color-dot" style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}/><strong>{subject.name}</strong></span></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article
+          className={'data-record-card subject-color-card '+(!subject.active?'is-inactive':'')}
+          style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}
+          key={subject.id}
+        >
+          <div className="data-record-card-heading"><div><strong className="subject-card-name"><span className="subject-color-dot"/>{subject.name}</strong><small>{subject.code||'Sin código'} · {subject.stage}</small></div><span className="tag">{subjectTypeLabel(subject.type)}</span></div>
           <div className="data-record-card-data"><div><span>Duración</span><strong>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</strong></div><div><span>Estado</span><strong>{subject.active?'Activa':'Inactiva'}</strong></div></div>
           <div className="data-record-card-footer"><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Editar" onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></div>
         </article>)}</div>}
