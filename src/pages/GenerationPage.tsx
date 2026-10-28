@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, ChevronDown, Info, Plus, RefreshCcw, Sparkles,
   Lock, Pencil, SquarePen, Trash2, Trophy, Undo2, Unlock, XCircle,
@@ -10,6 +10,7 @@ import {
   isGenerationProposalValid,
   isPrevalidationComplete,
   latestGeneration,
+  subjectDisplayColor,
   uniqueGenerationRuns,
   type GenerationRun,
   type ScheduleLockMode,
@@ -1270,7 +1271,8 @@ function SchedulePreview({
                 >
                   <button
                     type="button"
-                    className={'schedule-entry-edit '+(dragEntryId===primary.id?'is-being-dragged':'')}
+                    className={'schedule-entry-edit subject-tinted-entry '+(dragEntryId===primary.id?'is-being-dragged':'')}
+                    style={{'--subject-color':subject?subjectDisplayColor(subject):'#6B7F95'} as CSSProperties}
                     draggable={!draggedEntry||dragEntryId===primary.id}
                     onDragStart={()=>onDragEntry(primary.id)}
                     onDragEnd={()=>onDragEntry('')}
@@ -1315,18 +1317,20 @@ function TeacherSchedulePreview({
           const cell=run.entries.filter(entry=>entry.teacherId===teacherId&&entry.day===day&&entry.sessionId===block.id)
           if(!cell.length)return <td key={day} className="empty-slot">—</td>
           return <td key={day} className="schedule-edit-cell">{cell.map(entry=>{
-            const subject=project.subjects.find(item=>item.id===entry.subjectId)?.name??'Materia'
+            const subject=project.subjects.find(item=>item.id===entry.subjectId)
+            const subjectName=subject?.name??'Materia'
             const group=project.groups.find(item=>item.id===entry.groupId)?.name??'Grupo'
             const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
             return <button
               type="button"
-              className="schedule-entry-edit schedule-entry-edit-only"
+              className="schedule-entry-edit schedule-entry-edit-only subject-tinted-entry"
+              style={{'--subject-color':subject?subjectDisplayColor(subject):'#6B7F95'} as CSSProperties}
               key={entry.id}
               onClick={()=>onEdit(entry.id)}
               title="Editar sesión"
-              aria-label={`Editar ${subject} de ${group}`}
+              aria-label={`Editar ${subjectName} de ${group}`}
             >
-              <strong>{subject}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><SquarePen className="schedule-entry-edit-icon schedule-entry-edit-only-icon" size={13}/>
+              <strong>{subjectName}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><SquarePen className="schedule-entry-edit-icon schedule-entry-edit-only-icon" size={13}/>
             </button>
           })}</td>
         })}
@@ -1352,12 +1356,19 @@ function CenterSchedulePreview({
         return <div className="center-slot" key={block.id}>
           <header><strong>{block.label}</strong><small>{block.start}–{block.end}</small></header>
           <div>{entries.map(entry=>{
-            const subject=project.subjects.find(item=>item.id===entry.subjectId)?.name??'Materia'
+            const subject=project.subjects.find(item=>item.id===entry.subjectId)
+            const subjectName=subject?.name??'Materia'
             const group=project.groups.find(item=>item.id===entry.groupId)?.name??'Grupo'
             const teacher=project.teachers.find(item=>item.id===entry.teacherId)?.name??'Docente'
             const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
-            return <button type="button" key={entry.id} onClick={()=>onEdit(entry.id)}>
-              <strong>{group} · {subject}</strong><small>{teacher}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small>
+            return <button
+              type="button"
+              className="subject-tinted-entry"
+              style={{'--subject-color':subject?subjectDisplayColor(subject):'#6B7F95'} as CSSProperties}
+              key={entry.id}
+              onClick={()=>onEdit(entry.id)}
+            >
+              <strong>{group} · {subjectName}</strong><small>{teacher}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small>
             </button>
           })}</div>
         </div>
