@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose,
+  FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose, PanelLeftOpen,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
@@ -105,8 +105,27 @@ export default function App() {
       <div className={'mobile-overlay ' + (sidebarOpen ? 'show' : '')} onClick={() => setSidebarOpen(false)} />
       <aside className={'sidebar ' + (sidebarOpen ? 'mobile-open' : '')}>
         <div className="sidebar-brand">
-          <Logo compact={collapsed}/>
-          <button className="icon-button collapse-button" onClick={() => setCollapsed(value => !value)} aria-label="Contraer navegación"><PanelLeftClose size={19}/></button>
+          {collapsed
+            ? <button
+                type="button"
+                className="collapsed-brand-toggle"
+                onClick={()=>setCollapsed(false)}
+                aria-label="Mostrar barra lateral"
+                data-tooltip="Mostrar barra lateral"
+              >
+                <span className="collapsed-brand-logo"><Logo compact/></span>
+                <span className="collapsed-brand-open-icon" aria-hidden="true"><PanelLeftOpen size={19}/></span>
+              </button>
+            : <>
+                <Logo/>
+                <button
+                  type="button"
+                  className="icon-button collapse-button sidebar-tooltip"
+                  onClick={()=>setCollapsed(true)}
+                  aria-label="Ocultar barra lateral"
+                  data-tooltip="Ocultar barra lateral"
+                ><PanelLeftClose size={19}/></button>
+              </>}
           <button className="icon-button mobile-close" onClick={() => setSidebarOpen(false)} aria-label="Cerrar"><X size={19}/></button>
         </div>
         <nav className="nav-list">
