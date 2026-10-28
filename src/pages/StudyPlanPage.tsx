@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import {
-  BookOpen, CheckCircle2, ChevronDown, Copy, GraduationCap, Pencil, Plus, Save, Trash2,
+  BookOpen, CheckCircle2, ChevronDown, Copy, GraduationCap, Palette, Pencil, Plus, Save, Trash2,
 } from 'lucide-react'
 import {
   firstAvailableSubjectColor,
@@ -93,6 +93,9 @@ export function StudyPlanPage({
   const [entryGroupFilter,setEntryGroupFilter]=useState<'all'|string>('all')
   const [subjectModalOpen,setSubjectModalOpen]=useState(false)
   const [entryModalOpen,setEntryModalOpen]=useState(false)
+  const [colorSubjectId,setColorSubjectId]=useState<string|null>(null)
+  const [colorPickerValue,setColorPickerValue]=useState('#4F7CAC')
+  const [colorPickerError,setColorPickerError]=useState('')
   const [subjectsExpanded,setSubjectsExpanded]=useState(false)
   const [entriesExpanded,setEntriesExpanded]=useState(false)
   const [subjectsView,setSubjectsView]=useState<DataView>('table')
@@ -202,6 +205,30 @@ export function StudyPlanPage({
     setSubjectModalOpen(true)
   }
   const openEntryCreate=()=>{setEntryDraft(emptyEntry);setEditingEntry(null);setEntryError('');setEntryModalOpen(true)}
+
+  const openColorPicker=(subject:Subject)=>{
+    setColorSubjectId(subject.id)
+    setColorPickerValue(subjectDisplayColor(subject))
+    setColorPickerError('')
+  }
+
+  const applyQuickSubjectColor=()=>{
+    const subject=project.subjects.find(item=>item.id===colorSubjectId)
+    const color=colorPickerValue.toUpperCase()
+    if(!subject)return
+    if(!/^#[0-9A-F]{6}$/.test(color)){
+      setColorPickerError('Selecciona un color válido.')
+      return
+    }
+    const duplicate=project.subjects.find(item=>item.id!==subject.id&&item.color?.toUpperCase()===color)
+    if(duplicate){
+      setColorPickerError(`Ese color ya lo utiliza ${duplicate.name}.`)
+      return
+    }
+    persist({subjects:project.subjects.map(item=>item.id===subject.id?{...item,color}:item)})
+    setColorSubjectId(null)
+    setColorPickerError('')
+  }
 
   const applyTemplate=(kind:'infantil'|'primaria')=>{
     const result=kind==='infantil'
@@ -444,6 +471,54 @@ export function StudyPlanPage({
       {!validation.length&&!activeEntries.length&&<button type="button" className="section-status-action" onClick={openEntryCreate}>Añadir primera carga</button>}
     </article>
 
+    {colorSubjectId&&<div className="modal-backdrop section-form-modal-backdrop" onMouseDown={()=>setColorSubjectId(null)}>
+      <section className="app-modal subject-color-picker-modal" role="dialog" aria-modal="true" aria-label="Seleccionar color de materia" onMouseDown={event=>event.stopPropagation()}>
+        <div className="app-modal-header"><div><Palette size={20}/><h2>Color de materia</h2></div></div>
+        <div className="app-modal-body">
+          <div className="subject-color-picker-summary">
+            <span className="subject-color-picker-preview" style={{'--subject-color':colorPickerValue} as CSSProperties}/>
+            <div><strong>{project.subjects.find(item=>item.id===colorSubjectId)?.name??'Materia'}</strong><small>{colorPickerValue.toUpperCase()}</small></div>
+          </div>
+          <div className="subject-color-picker-system">
+            <label>
+              <span>Selector del sistema</span>
+              <input
+                type="color"
+                value={colorPickerValue}
+                onChange={event=>{setColorPickerValue(event.target.value.toUpperCase());setColorPickerError('')}}
+                aria-label="Seleccionar color personalizado"
+              />
+            </label>
+          </div>
+          <div className="subject-color-palette subject-color-palette-quick" role="group" aria-label="Paleta de colores">
+            {SUBJECT_COLOR_PALETTE.map(item=>{
+              const usedBy=project.subjects.find(subject=>
+                subject.id!==colorSubjectId &&
+                subject.color?.toUpperCase()===item.value.toUpperCase()
+              )
+              const selected=colorPickerValue.toUpperCase()===item.value.toUpperCase()
+              return <button
+                type="button"
+                key={item.value}
+                className={'subject-color-swatch '+(selected?'selected ':'')+(usedBy?'is-used':'')}
+                style={{'--subject-color':item.value} as CSSProperties}
+                aria-label={usedBy?`${item.label}, usado por ${usedBy.name}`:item.label}
+                title={usedBy?`${item.label} · Usado por ${usedBy.name}`:item.label}
+                aria-pressed={selected}
+                disabled={Boolean(usedBy)}
+                onClick={()=>{setColorPickerValue(item.value);setColorPickerError('')}}
+              />
+            })}
+          </div>
+          {colorPickerError&&<div className="inline-error">{colorPickerError}</div>}
+        </div>
+        <div className="app-modal-footer">
+          <button type="button" className="btn ghost-inline" onClick={()=>setColorSubjectId(null)}>Cancelar</button>
+          <button type="button" className="btn primary" onClick={applyQuickSubjectColor}>Aplicar color</button>
+        </div>
+      </section>
+    </div>}
+
     {subjectModalOpen&&<div className="modal-backdrop section-form-modal-backdrop">
       <form className="app-modal section-form-modal" onSubmit={submitSubject} role="dialog" aria-modal="true" aria-label={editingSubject?'Editar materia':'Añadir materia'}>
         <div className="app-modal-header"><div><BookOpen size={20}/><h2>{editingSubject?'Editar materia':'Añadir materia'}</h2></div></div>
@@ -538,14 +613,18 @@ export function StudyPlanPage({
           <SortableTh label="Duración" sortKey="duration" state={subjectsSort} onSort={setSubjectsSort}/>
           <SortableTh label="Estado" sortKey="active" state={subjectsSort} onSort={setSubjectsSort}/>
           <th/>
-        </tr></thead><tbody>{displayedSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><span className="subject-name-with-color"><span className="subject-color-dot" style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}/><strong>{subject.name}</strong></span></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article
+        </tr></thead><tbody>{displayedSubjects.map(subject=><tr
+          key={subject.id}
+          className={'subject-color-row '+(!subject.active?'is-inactive':'')}
+          style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}
+        ><td><span className="subject-name-with-color"><span className="subject-color-dot"/><strong>{subject.name}</strong></span></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button title="Color" onClick={()=>openColorPicker(subject)}><Palette size={15}/></button><button title="Editar" onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article
           className={'data-record-card subject-color-card '+(!subject.active?'is-inactive':'')}
           style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}
           key={subject.id}
         >
           <div className="data-record-card-heading"><div><strong className="subject-card-name"><span className="subject-color-dot"/>{subject.name}</strong><small>{subject.code||'Sin código'} · {subject.stage}</small></div><span className="tag">{subjectTypeLabel(subject.type)}</span></div>
           <div className="data-record-card-data"><div><span>Duración</span><strong>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</strong></div><div><span>Estado</span><strong>{subject.active?'Activa':'Inactiva'}</strong></div></div>
-          <div className="data-record-card-footer"><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Editar" onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></div>
+          <div className="data-record-card-footer"><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Color" onClick={()=>openColorPicker(subject)}><Palette size={15}/></button><button title="Editar" onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></div>
         </article>)}</div>}
       </div>}
     </section>
