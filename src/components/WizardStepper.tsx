@@ -1,7 +1,8 @@
 import {
-  BookOpen, CalendarClock, CheckCircle2, GraduationCap, LayoutGrid, LockKeyhole,
+  BookOpen, CalendarClock, CheckCircle2, ChevronDown, GraduationCap, LayoutGrid, LockKeyhole,
   ShieldCheck, SlidersHorizontal, CalendarDays, Users,
 } from 'lucide-react'
+import { useState } from 'react'
 import {
   isCenterComplete,
   isScheduleComplete,
@@ -31,11 +32,14 @@ export function WizardStepper({
   currentStep,
   project,
   navigate,
+  compact=false,
 }: {
   currentStep:number
   project:ViyeuticaProject
   navigate:(path:string)=>void
+  compact?:boolean
 }) {
+  const [expanded,setExpanded]=useState(!compact)
   const completed:Record<number,boolean> = {
     1:isCenterComplete(project.center),
     2:isStructureComplete(project),
@@ -48,8 +52,40 @@ export function WizardStepper({
     9:isGenerationComplete(project),
   }
 
+  const completedCount=Object.values(completed).filter(Boolean).length
+  const current=steps.find(step=>step.number===currentStep)
+
+  if(compact&&!expanded&&current){
+    const Icon=current.icon
+    return <section className="wizard-stepper-compact" aria-label="Progreso de configuración">
+      <button
+        type="button"
+        className="wizard-stepper-current"
+        onClick={()=>current.route&&navigate(current.route)}
+        aria-current="step"
+      >
+        <span className="wizard-step-icon"><Icon size={16}/></span>
+        <span>
+          <strong>{current.number}. {current.label}</strong>
+          <small>{completedCount} de {steps.length} pasos completos</small>
+        </span>
+      </button>
+      <button
+        type="button"
+        className="wizard-stepper-expand"
+        onClick={()=>setExpanded(true)}
+        aria-label="Mostrar todos los pasos"
+      >
+        <span>Ver pasos</span><ChevronDown size={15}/>
+      </button>
+    </section>
+  }
+
   return (
-    <section className="wizard-stepper" aria-label="Pasos de configuración">
+    <section className={'wizard-stepper '+(compact?'is-compact-expanded':'')} aria-label="Pasos de configuración">
+      {compact&&<div className="wizard-stepper-collapse-row">
+        <button type="button" onClick={()=>setExpanded(false)}><span>Ocultar pasos</span><ChevronDown size={15}/></button>
+      </div>}
       {steps.map(step => {
         const Icon=step.icon
         const active=step.number===currentStep
