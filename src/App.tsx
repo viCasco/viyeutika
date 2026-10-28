@@ -132,7 +132,13 @@ export default function App() {
           {navigation.map(item => {
             const Icon=item.icon
             const isActive=route===item.path
-            return <button key={item.path} className={'nav-item '+(isActive?'active':'')} onClick={() => go(item.path)} title={collapsed?item.label:undefined}><Icon size={19}/><span>{item.label}</span></button>
+            return <button
+              key={item.path}
+              className={'nav-item '+(isActive?'active ':'')+(collapsed?'nav-item-tooltip':'')}
+              onClick={()=>go(item.path)}
+              data-tooltip={collapsed?item.label:undefined}
+              aria-label={collapsed?item.label:undefined}
+            ><Icon size={19}/><span>{item.label}</span></button>
           })}
         </nav>
         <div className="sidebar-user"><span className="avatar">AD</span><div><strong>Administrador</strong><small>{centerName}</small></div><ChevronDown size={16}/></div>
