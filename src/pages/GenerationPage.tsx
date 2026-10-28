@@ -83,6 +83,7 @@ export function GenerationPage({
   const [editError,setEditError]=useState('')
   const [editLockMode,setEditLockMode]=useState<ScheduleLockMode|'none'>('none')
   const [dragEntryId,setDragEntryId]=useState('')
+  const [resultDetailsExpanded,setResultDetailsExpanded]=useState(false)
   const [alternativeSimulation,setAlternativeSimulation]=useState<Record<string,{
     valid:boolean
     emptySlots:number
@@ -132,6 +133,10 @@ export function GenerationPage({
   const selectedIsDraft=Boolean(selectedRun&&draftRun?.id===selectedRun.id)
   const selectedIsEstablished=Boolean(selectedRun&&establishedRun?.id===selectedRun.id)
   const editEntry=selectedRun?.entries.find(entry=>entry.id===editEntryId)??null
+
+  useEffect(()=>{
+    setResultDetailsExpanded(Boolean(selectedRun&&selectedRun.status!=='complete'))
+  },[selectedRun?.id,selectedRun?.status])
 
   const openScheduleEditor=(entryId:string,target?:{day:Weekday;sessionId:string})=>{
     if(!selectedRun)return
@@ -511,7 +516,7 @@ export function GenerationPage({
         </div>
         <div className="wizard-progress-summary"><strong>9 <span>de 9</span></strong><small>Horarios</small></div>
       </section>
-      <WizardStepper currentStep={9} project={project} navigate={navigate}/>
+      <WizardStepper currentStep={9} project={project} navigate={navigate} compact={Boolean(selectedRun)}/>
       <section className="empty-state-card">
         <Sparkles size={34}/>
         <h1>Primero debe superarse la Prevalidación</h1>
@@ -684,11 +689,17 @@ export function GenerationPage({
         </section>}
 
         {selectedRun&&<section className="generation-result">
-          <div className="generation-result-heading">
-            <div>
+          <div className={'generation-result-heading '+(resultDetailsExpanded?'is-expanded':'is-collapsed')}>
+            <div className="generation-result-heading-copy">
               <span className="panel-kicker">Resultado seleccionado</span>
               <h2>{selectedRun.status==='complete'?'Horario completo':selectedRun.status==='partial'?'Horario parcial':'Horario no generado'}</h2>
-              <p>{new Date(selectedRun.createdAt).toLocaleString('es-ES')}</p>
+              <div className="generation-result-compact-metrics">
+                <span>{selectedRun.placedSessions}/{selectedRun.requestedSessions} sesiones</span>
+                <span>{selectedRun.hardViolations} HARD</span>
+                <span>{selectedRun.softPenalty} SOFT</span>
+                <span>{selectedRun.score} pts</span>
+              </div>
+              {resultDetailsExpanded&&<p>{new Date(selectedRun.createdAt).toLocaleString('es-ES')}</p>}
             </div>
             <div className="generation-result-actions">
               {selectedIsEstablished
@@ -709,27 +720,37 @@ export function GenerationPage({
                       onClick={()=>setShowEstablishModal(true)}
                     ><CalendarCheck2 size={16}/> Guardar como horario del curso</button>
                   </>}
-              <div className="generation-score"><Trophy size={18}/><strong>{selectedRun.score}</strong><small>puntuación</small></div>
+              <button
+                type="button"
+                className="generation-result-toggle"
+                onClick={()=>setResultDetailsExpanded(value=>!value)}
+                aria-expanded={resultDetailsExpanded}
+                title={resultDetailsExpanded?'Ocultar métricas':'Mostrar métricas'}
+              >
+                <ChevronDown size={16}/>
+              </button>
             </div>
           </div>
 
-          <section className="structure-summary">
-            <Summary label="Sesiones colocadas" value={String(selectedRun.placedSessions)} detail={`de ${selectedRun.requestedSessions} solicitadas`}/>
-            <Summary label="Incumplimientos HARD" value={String(selectedRun.hardViolations)} detail={selectedRun.hardViolations?'requieren revisión':'sin bloqueos'}/>
-            <Summary label="Penalización SOFT" value={String(selectedRun.softPenalty)} detail="menor es mejor"/>
-            <Summary label="Estado" value={selectedRun.status==='complete'?'Completo':selectedRun.status==='partial'?'Parcial':'Fallido'} detail="resultado del motor"/>
-          </section>
+          {resultDetailsExpanded&&<>
+            <section className="structure-summary">
+              <Summary label="Sesiones colocadas" value={String(selectedRun.placedSessions)} detail={`de ${selectedRun.requestedSessions} solicitadas`}/>
+              <Summary label="Incumplimientos HARD" value={String(selectedRun.hardViolations)} detail={selectedRun.hardViolations?'requieren revisión':'sin bloqueos'}/>
+              <Summary label="Penalización SOFT" value={String(selectedRun.softPenalty)} detail="menor es mejor"/>
+              <Summary label="Estado" value={selectedRun.status==='complete'?'Completo':selectedRun.status==='partial'?'Parcial':'Fallido'} detail="resultado del motor"/>
+            </section>
 
-          {(selectedRun.issues?.length??selectedRun.notes.length)>0&&<div className="generation-issues-summary">
-            <div>
-              <AlertTriangle size={18}/>
-              <span>
-                <strong>Hay incidencias que impiden completar el horario</strong>
-                <small>{generationIssueSummary(selectedRun,project)}</small>
-              </span>
-            </div>
-            <button className="btn secondary-light" onClick={()=>setShowIssuesModal(true)}>Ver incidencias</button>
-          </div>}
+            {(selectedRun.issues?.length??selectedRun.notes.length)>0&&<div className="generation-issues-summary">
+              <div>
+                <AlertTriangle size={18}/>
+                <span>
+                  <strong>Hay incidencias que impiden completar el horario</strong>
+                  <small>{generationIssueSummary(selectedRun,project)}</small>
+                </span>
+              </div>
+              <button className="btn secondary-light" onClick={()=>setShowIssuesModal(true)}>Ver incidencias</button>
+            </div>}
+          </>}
 
           <div className="generation-toolbar generation-view-toolbar">
             <div className="generation-filter-stack">
