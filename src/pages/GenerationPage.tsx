@@ -69,6 +69,7 @@ export function GenerationPage({
   const [showIssuesModal,setShowIssuesModal]=useState(false)
   const [showEstablishModal,setShowEstablishModal]=useState(false)
   const [showDraftModal,setShowDraftModal]=useState(false)
+  const [showDiscardDraftModal,setShowDiscardDraftModal]=useState(false)
   const [ascending,setAscending]=useState(true)
   const [generationNotice,setGenerationNotice]=useState('')
   const [generationAlternatives,setGenerationAlternatives]=useState<GenerationAlternative[]>([])
@@ -136,6 +137,9 @@ export function GenerationPage({
     isGenerationProposalValid(project,run)&&auditGeneration(project,run).passed
   const selectedIsDraft=Boolean(selectedRun&&draftRun?.id===selectedRun.id)
   const selectedIsEstablished=Boolean(selectedRun&&establishedRun?.id===selectedRun.id)
+  const draftMatchesEstablished=Boolean(
+    draftRun&&establishedRun&&generationSignature(draftRun)===generationSignature(establishedRun)
+  )
   const editEntry=selectedRun?.entries.find(entry=>entry.id===editEntryId)??null
 
   useEffect(()=>{
@@ -359,6 +363,21 @@ export function GenerationPage({
       establishedScheduleSavedAt:new Date().toISOString(),
     },{intent:'established'})
     setShowEstablishModal(false)
+  }
+
+  const discardDraftSchedule=()=>{
+    if(!draftRun)return
+    const fallbackId=establishedRun?.id??runs[runs.length-1]?.id??null
+    saveProject({
+      ...project,
+      selectedGenerationRunId:fallbackId,
+      draftScheduleRun:null,
+      draftScheduleSavedAt:null,
+      draftScheduleNeedsRevalidation:false,
+    },{intent:'draft'})
+    setSelectedRunId(fallbackId??'')
+    setShowDiscardDraftModal(false)
+    setGenerationNotice('Borrador descartado. El horario establecido se conserva intacto.')
   }
 
   const toggleGroup=(groupId:string)=>{
@@ -659,7 +678,45 @@ export function GenerationPage({
       : <>
         <section className="generation-history">
           <div className="groups-table-heading">
-            <div><span className="panel-kicker">Comparación</span><h2>Propuestas y horarios guardados</h2></div>
+            <div><span className="panel-kicker">Horarios del curso</span><h2>Versiones guardadas</h2></div>
+          </div>
+          <div className="generation-saved-schedules">
+            {establishedRun&&<RunCard
+              run={establishedRun}
+              best={false}
+              selected={establishedRun.id===selectedRun?.id}
+              label="Horario establecido"
+              artifactKind="established"
+              difference={0}
+              baseline={true}
+              onClick={()=>{
+                setSelectedRunId(establishedRun.id)
+                saveProject({...project,selectedGenerationRunId:establishedRun.id},{intent:'selection'})
+              }}
+            />}
+            {draftRun&&<RunCard
+              run={draftRun}
+              best={false}
+              selected={draftRun.id===selectedRun?.id}
+              label="Borrador guardado"
+              artifactKind="draft"
+              difference={establishedRun?generationDifference(establishedRun,draftRun).differentPlacements:0}
+              baseline={!establishedRun}
+              note={draftMatchesEstablished?'Sin cambios respecto al horario establecido':undefined}
+              onDiscard={()=>setShowDiscardDraftModal(true)}
+              onClick={()=>{
+                setSelectedRunId(draftRun.id)
+                saveProject({...project,selectedGenerationRunId:draftRun.id},{intent:'selection'})
+              }}
+            />}
+            {!establishedRun&&!draftRun&&<div className="generation-saved-empty">
+              <CalendarDays size={18}/>
+              <span>No hay horarios guardados todavía.</span>
+            </div>}
+          </div>
+
+          <div className="generation-proposals-heading">
+            <div><span className="panel-kicker">Propuestas</span><h3>Alternativas generadas</h3></div>
             <div className="generation-history-actions">
               <button className="btn ghost-inline" title="Invertir orden" onClick={()=>setAscending(value=>!value)}>
                 <ArrowDownUp size={15}/> {ascending?'1 → N':'N → 1'}
@@ -674,33 +731,15 @@ export function GenerationPage({
               const originalIndex=runs.findIndex(item=>item.id===run.id)
               const first=runs[0]
               const diff=first&&run.id!==first.id?generationDifference(first,run):null
-              const savedKind=establishedRun?.id===run.id?'established':draftRun?.id===run.id?'draft':null
               return <RunCard
                 key={run.id}
                 run={run}
                 best={isBestRun(run,runs)}
                 selected={run.id===selectedRun?.id}
                 label={`Propuesta ${originalIndex+1}`}
-                artifactKind={savedKind}
+                artifactKind={null}
                 difference={diff?.differentPlacements??0}
                 baseline={run.id===first?.id}
-                onClick={()=>{
-                  setSelectedRunId(run.id)
-                  saveProject({...project,selectedGenerationRunId:run.id},{intent:'selection'})
-                }}
-              />
-            })}
-            {retainedRuns.map(({run,kind})=>{
-              const diff=baselineRun&&run.id!==baselineRun.id?generationDifference(baselineRun,run):null
-              return <RunCard
-                key={kind+'-'+run.id}
-                run={run}
-                best={false}
-                selected={run.id===selectedRun?.id}
-                label={kind==='draft'?'Borrador guardado':'Horario establecido'}
-                artifactKind={kind}
-                difference={diff?.differentPlacements??0}
-                baseline={run.id===baselineRun?.id}
                 onClick={()=>{
                   setSelectedRunId(run.id)
                   saveProject({...project,selectedGenerationRunId:run.id},{intent:'selection'})
@@ -735,7 +774,11 @@ export function GenerationPage({
           <div className={'generation-result-heading '+(resultDetailsExpanded?'is-expanded':'is-collapsed')}>
             <div className="generation-result-heading-copy">
               <span className="panel-kicker">Resultado seleccionado</span>
-              <h2>{selectedRun.status==='complete'?'Horario completo':selectedRun.status==='partial'?'Horario parcial':'Horario no generado'}</h2>
+              <div className="generation-result-title-row">
+                <h2>{selectedRun.status==='complete'?'Horario completo':selectedRun.status==='partial'?'Horario parcial':'Horario no generado'}</h2>
+                {selectedIsEstablished&&<span className="established-inline-badge">Horario establecido</span>}
+                {selectedIsDraft&&<span className="draft-inline-badge">Borrador</span>}
+              </div>
               <div className="generation-result-compact-metrics">
                 <span>{selectedRun.placedSessions}/{selectedRun.requestedSessions} sesiones</span>
                 <span>{selectedRun.hardViolations} HARD</span>
@@ -1028,6 +1071,21 @@ export function GenerationPage({
       </div>
     </AppModal>}
 
+    {showDiscardDraftModal&&draftRun&&<AppModal
+      title="Descartar borrador"
+      icon={<Trash2 size={19}/>}
+      onClose={()=>setShowDiscardDraftModal(false)}
+      footer={<>
+        <button type="button" className="btn secondary-light" onClick={()=>setShowDiscardDraftModal(false)}>Cancelar</button>
+        <button type="button" className="btn danger" onClick={discardDraftSchedule}><Trash2 size={16}/> Descartar borrador</button>
+      </>}
+    >
+      <div className="discard-draft-copy">
+        <p>Se eliminará la versión de trabajo guardada. El horario establecido se conservará intacto.</p>
+        {draftMatchesEstablished&&<div className="notice success"><CheckCircle2 size={17}/><span>Este borrador no contiene cambios respecto al horario establecido.</span></div>}
+      </div>
+    </AppModal>}
+
     {showIssuesModal&&selectedRun&&<GenerationIssuesModal
       project={project}
       run={selectedRun}
@@ -1038,7 +1096,7 @@ export function GenerationPage({
 }
 
 function RunCard({
-  run,best,selected,label,difference,baseline,artifactKind,onClick,
+  run,best,selected,label,difference,baseline,artifactKind,note,onDiscard,onClick,
 }:{
   run:GenerationRun
   best:boolean
@@ -1047,18 +1105,23 @@ function RunCard({
   difference:number
   baseline:boolean
   artifactKind:'draft'|'established'|null
+  note?:string
+  onDiscard?:()=>void
   onClick:()=>void
 }) {
   const Icon=run.status==='complete'?CheckCircle2:run.status==='partial'?AlertTriangle:XCircle
-  return <button className={'generation-run-card '+(selected?'selected ':'')+run.status} onClick={onClick}>
-    <Icon size={18}/>
-    <span className="generation-run-main">
-      <strong>{label}{best&&<em>Mejor</em>}{artifactKind==='draft'&&<em className="draft-inline-badge">Borrador</em>}{artifactKind==='established'&&<em className="established-inline-badge">Establecido</em>}</strong>
-      <small>{run.placedSessions}/{run.requestedSessions} sesiones · HARD {run.hardViolations} · SOFT {run.softPenalty}{run.referenceRunId?` · Cambios ${run.changeCount??0}`:''}</small>
-      <small className="generation-difference">{baseline?'Referencia para comparar':difference===0?'Sin diferencias frente a la referencia':`${difference} colocaciones distintas frente a la referencia`}</small>
-    </span>
-    <span className="generation-run-score">{run.score}</span>
-  </button>
+  return <div className={'generation-run-card-wrap '+(selected?'selected ':'')+run.status}>
+    <button className="generation-run-card-main" onClick={onClick}>
+      <Icon size={18}/>
+      <span className="generation-run-main">
+        <strong>{label}{best&&<em>Mejor</em>}{artifactKind==='draft'&&<em className="draft-inline-badge">Borrador</em>}{artifactKind==='established'&&<em className="established-inline-badge">Establecido</em>}</strong>
+        <small>{run.placedSessions}/{run.requestedSessions} sesiones · HARD {run.hardViolations} · SOFT {run.softPenalty}{run.referenceRunId?` · Cambios ${run.changeCount??0}`:''}</small>
+        <small className="generation-difference">{note??(baseline?'Referencia para comparar':difference===0?'Sin diferencias frente a la referencia':`${difference} colocaciones distintas frente a la referencia`)}</small>
+      </span>
+      <span className="generation-run-score">{run.score}</span>
+    </button>
+    {onDiscard&&<button type="button" className="generation-run-discard" onClick={onDiscard} title="Descartar borrador" aria-label="Descartar borrador"><Trash2 size={15}/></button>}
+  </div>
 }
 
 function SchedulePreview({
