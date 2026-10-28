@@ -2460,30 +2460,20 @@ button.btn:disabled:hover{
   border-color:#d9e4ef;
 }
 .app-shell.is-collapsed .sidebar-brand{
-  display:grid;
-  grid-template-columns:minmax(0,1fr) 26px;
+  display:flex;
   align-items:center;
-  justify-content:initial;
-  column-gap:2px;
-  padding:0 5px 0 7px;
+  justify-content:center;
+  padding:0 8px;
 }
 .app-shell.is-collapsed .sidebar-brand .brand-compact{
   width:44px;
   height:44px;
   min-width:44px;
   padding:2px;
-  justify-self:center;
 }
 .app-shell.is-collapsed .sidebar-brand .brand-compact img{
   width:40px;
   height:40px;
-}
-.app-shell.is-collapsed .sidebar-brand .collapse-button{
-  width:26px;
-  height:32px;
-  min-width:26px;
-  margin:0;
-  justify-self:end;
 }
 [data-theme="dark"] .sidebar-brand{
   background:#ffffff;
@@ -2933,4 +2923,89 @@ button.btn:disabled:hover{
   .generated-schedule th,.generated-schedule td{padding:9px 7px}
   .schedule-entry-edit{min-height:58px;padding:9px 22px 9px 9px}
   .generation-group-heading{padding:12px}
+}
+
+
+/* === Sidebar collapse tooltips === */
+.collapsed-brand-toggle{
+  position:relative;
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border:0;
+  border-radius:11px;
+  background:transparent;
+  color:#6f86a0;
+  cursor:pointer;
+}
+.collapsed-brand-toggle:hover,
+.collapsed-brand-toggle:focus-visible{
+  background:#eef4fb;
+  color:var(--navy2);
+  outline:none;
+}
+.collapsed-brand-logo,
+.collapsed-brand-open-icon{
+  grid-area:1/1;
+  display:grid;
+  place-items:center;
+  transition:opacity .14s ease,transform .14s ease;
+}
+.collapsed-brand-logo{opacity:1;transform:scale(1)}
+.collapsed-brand-open-icon{opacity:0;transform:scale(.9)}
+.collapsed-brand-toggle:hover .collapsed-brand-logo,
+.collapsed-brand-toggle:focus-visible .collapsed-brand-logo{
+  opacity:0;
+  transform:scale(.92);
+}
+.collapsed-brand-toggle:hover .collapsed-brand-open-icon,
+.collapsed-brand-toggle:focus-visible .collapsed-brand-open-icon{
+  opacity:1;
+  transform:scale(1);
+}
+.collapsed-brand-toggle::after,
+.sidebar-tooltip::after{
+  content:attr(data-tooltip);
+  position:absolute;
+  top:50%;
+  left:calc(100% + 10px);
+  transform:translateY(-50%) translateX(-4px);
+  z-index:100;
+  width:max-content;
+  max-width:220px;
+  padding:7px 9px;
+  border-radius:8px;
+  background:#101010;
+  color:#fff;
+  font-size:8px;
+  font-weight:750;
+  line-height:1.2;
+  box-shadow:0 5px 16px rgba(0,0,0,.2);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .12s ease,transform .12s ease,visibility .12s ease;
+}
+.collapsed-brand-toggle:hover::after,
+.collapsed-brand-toggle:focus-visible::after,
+.sidebar-tooltip:hover::after,
+.sidebar-tooltip:focus-visible::after{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(-50%) translateX(0);
+}
+.sidebar-tooltip{position:relative}
+.sidebar-tooltip:focus-visible{
+  outline:2px solid #6d9bc8;
+  outline-offset:2px;
+}
+[data-theme="dark"] .collapsed-brand-toggle:hover,
+[data-theme="dark"] .collapsed-brand-toggle:focus-visible{
+  background:#edf3f8;
+  color:#245b8e;
+}
+@media(max-width:780px){
+  .collapsed-brand-toggle::after,
+  .sidebar-tooltip::after{display:none}
 }
