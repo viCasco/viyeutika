@@ -3074,7 +3074,6 @@ button.btn:disabled:hover{
   --subject-color:#6B7F95;
   position:relative;
   overflow:hidden;
-  border-top:4px solid var(--subject-color);
   background:
     linear-gradient(
       180deg,
@@ -3134,4 +3133,85 @@ button.btn:disabled:hover{
 [data-theme="dark"] .subject-color-card .data-record-card-heading .tag{
   background:color-mix(in srgb,var(--subject-color) 18%,#202c3b);
   color:#d9e4ef;
+}
+
+
+/* === Subject table tint and quick picker === */
+.subject-color-row{
+  --subject-color:#6B7F95;
+  border-left:5px solid var(--subject-color);
+  background:color-mix(in srgb,var(--subject-color) 25%,var(--surface));
+}
+.subject-color-row td{
+  background:transparent;
+}
+.subject-color-row td:first-child{
+  border-left:5px solid var(--subject-color);
+}
+.subject-color-row:hover{
+  background:color-mix(in srgb,var(--subject-color) 31%,var(--surface));
+}
+.subject-color-picker-modal{
+  width:min(520px,92vw);
+}
+.subject-color-picker-summary{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:14px;
+  padding:10px 12px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--field-bg,#fff);
+}
+.subject-color-picker-summary strong,
+.subject-color-picker-summary small{display:block}
+.subject-color-picker-summary small{margin-top:3px;color:var(--muted);font-size:8px}
+.subject-color-picker-preview{
+  --subject-color:#4F7CAC;
+  width:38px;
+  height:38px;
+  flex:0 0 38px;
+  border-radius:10px;
+  background:var(--subject-color);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
+}
+.subject-color-picker-system{
+  margin-bottom:12px;
+}
+.subject-color-picker-system label{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:9px 11px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--field-bg,#fff);
+}
+.subject-color-picker-system span{
+  font-size:8.5px;
+  font-weight:850;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.subject-color-picker-system input[type="color"]{
+  width:64px;
+  height:34px;
+  padding:2px;
+  border:1px solid var(--border);
+  border-radius:8px;
+  background:var(--surface);
+  cursor:pointer;
+}
+.subject-color-palette-quick{
+  max-height:220px;
+  overflow:auto;
+}
+[data-theme="dark"] .subject-color-row{
+  background:color-mix(in srgb,var(--subject-color) 22%,var(--surface));
+}
+[data-theme="dark"] .subject-color-row:hover{
+  background:color-mix(in srgb,var(--subject-color) 29%,var(--surface));
 }
