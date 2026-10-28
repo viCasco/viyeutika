@@ -3140,16 +3140,12 @@ button.btn:disabled:hover{
 .subject-color-row{
   --subject-color:#6B7F95;
   border-left:5px solid var(--subject-color);
-  background:color-mix(in srgb,var(--subject-color) 25%,var(--surface));
 }
 .subject-color-row td{
   background:transparent;
 }
 .subject-color-row td:first-child{
   border-left:5px solid var(--subject-color);
-}
-.subject-color-row:hover{
-  background:color-mix(in srgb,var(--subject-color) 31%,var(--surface));
 }
 .subject-color-picker-modal{
   width:min(520px,92vw);
@@ -3209,9 +3205,36 @@ button.btn:disabled:hover{
   max-height:220px;
   overflow:auto;
 }
-[data-theme="dark"] .subject-color-row{
-  background:color-mix(in srgb,var(--subject-color) 22%,var(--surface));
+
+
+/* === Weekly plan subject color parity === */
+.plan-entry-color-row td:first-child{
+  border-left:5px solid var(--subject-color);
 }
-[data-theme="dark"] .subject-color-row:hover{
-  background:color-mix(in srgb,var(--subject-color) 29%,var(--surface));
+.plan-entry-color-card{
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb,var(--subject-color) 8%,var(--surface)) 0,
+      var(--surface) 44%
+    );
+}
+.plan-entry-color-card::before{
+  background:color-mix(in srgb,var(--subject-color) 52%,transparent);
+}
+.plan-entry-color-card .tag{
+  background:color-mix(in srgb,var(--subject-color) 10%,#eef3f7);
+  color:color-mix(in srgb,var(--subject-color) 70%,#213650);
+}
+[data-theme="dark"] .plan-entry-color-card{
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb,var(--subject-color) 13%,var(--surface)) 0,
+      var(--surface) 48%
+    );
+}
+[data-theme="dark"] .plan-entry-color-card .tag{
+  background:color-mix(in srgb,var(--subject-color) 18%,#202c3b);
+  color:#d9e4ef;
 }
