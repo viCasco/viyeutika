@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import {
   BookOpen, CheckCircle2, ChevronDown, Copy, GraduationCap, Pencil, Plus, Save, Trash2,
 } from 'lucide-react'
 import {
   isStructureComplete,
+  SUBJECT_COLOR_PALETTE,
+  subjectDisplayColor,
   validateStudyPlan,
   type EducationStage,
   type StudyPlanEntry,
@@ -28,6 +30,7 @@ interface SubjectDraft {
   stage:EducationStage|''
   type:SubjectType
   defaultSessionMinutes:string
+  color:string
 }
 
 interface EntryDraft {
@@ -43,7 +46,7 @@ interface EntryDraft {
 }
 
 const emptySubject:SubjectDraft={
-  name:'',code:'',stage:'',type:'common',defaultSessionMinutes:'',
+  name:'',code:'',stage:'',type:'common',defaultSessionMinutes:'',color:'',
 }
 const emptyEntry:EntryDraft={
   groupId:'',subjectId:'',weeklySessions:'1',weeklyMinutes:'',mandatory:true,mode:'ordinary',
@@ -224,6 +227,7 @@ export function StudyPlanPage({
       stage:subjectDraft.stage,
       type:subjectDraft.type,
       defaultSessionMinutes:subjectDraft.defaultSessionMinutes===''?null:Math.max(1,Number(subjectDraft.defaultSessionMinutes)),
+      color:subjectDraft.color||null,
       active:true,
     }
     const next=editingSubject
@@ -241,6 +245,7 @@ export function StudyPlanPage({
       stage:subject.stage,
       type:subject.type,
       defaultSessionMinutes:subject.defaultSessionMinutes===null?'':String(subject.defaultSessionMinutes),
+      color:subject.color??'',
     })
     setSubjectError('')
     setSubjectModalOpen(true)
@@ -426,6 +431,23 @@ export function StudyPlanPage({
             <Field label="Etapa" required><select value={subjectDraft.stage} onChange={e=>setSubjectDraft({...subjectDraft,stage:e.target.value as EducationStage})}><option value="">Selecciona...</option>{project.center.stages.map(stage=><option key={stage} value={stage}>{stage}</option>)}</select></Field>
             <Field label="Tipo"><select value={subjectDraft.type} onChange={e=>setSubjectDraft({...subjectDraft,type:e.target.value as SubjectType})}>{subjectTypes.map(x=><option key={x.value} value={x.value}>{x.label}</option>)}</select></Field>
             <Field label="Duración habitual de sesión (min)"><input type="number" min="1" max="240" value={subjectDraft.defaultSessionMinutes} onChange={e=>setSubjectDraft({...subjectDraft,defaultSessionMinutes:e.target.value})} placeholder="Opcional"/></Field>
+            <div className="subject-color-field">
+              <span>Color en horarios</span>
+              <div className="subject-color-palette" role="group" aria-label="Color de la materia">
+                <button type="button" className={'subject-color-auto '+(subjectDraft.color===''?'selected':'')} aria-pressed={subjectDraft.color===''} onClick={()=>setSubjectDraft({...subjectDraft,color:''})}>Automático</button>
+                {SUBJECT_COLOR_PALETTE.map(item=><button
+                  type="button"
+                  key={item.value}
+                  className={'subject-color-swatch '+(subjectDraft.color===item.value?'selected':'')}
+                  style={{'--subject-color':item.value} as CSSProperties}
+                  aria-label={item.label}
+                  title={item.label}
+                  aria-pressed={subjectDraft.color===item.value}
+                  onClick={()=>setSubjectDraft({...subjectDraft,color:item.value})}
+                />)}
+              </div>
+              <small>Se usa como acento visual suave en Horarios. El texto mantiene contraste alto.</small>
+            </div>
           </div>
           {subjectError&&<div className="inline-error">{subjectError}</div>}
           <div className={'form-guide '+(subjectReady?'complete':'partial')}><strong>{subjectReady?'Materia lista':'Siguiente paso'}</strong><span>{subjectGuide}</span></div>
@@ -485,8 +507,8 @@ export function StudyPlanPage({
           <SortableTh label="Duración" sortKey="duration" state={subjectsSort} onSort={setSubjectsSort}/>
           <SortableTh label="Estado" sortKey="active" state={subjectsSort} onSort={setSubjectsSort}/>
           <th/>
-        </tr></thead><tbody>{displayedSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><strong>{subject.name}</strong></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article className={'data-record-card '+(!subject.active?'is-inactive':'')} key={subject.id}>
-          <div className="data-record-card-heading"><div><strong>{subject.name}</strong><small>{subject.code||'Sin código'} · {subject.stage}</small></div><span className="tag">{subjectTypeLabel(subject.type)}</span></div>
+        </tr></thead><tbody>{displayedSubjects.map(subject=><tr key={subject.id} className={!subject.active?'is-inactive':''}><td><span className="subject-name-with-color"><span className="subject-color-dot" style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}/><strong>{subject.name}</strong></span></td><td>{subject.code||'—'}</td><td>{subject.stage}</td><td>{subjectTypeLabel(subject.type)}</td><td>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</td><td><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button></td><td><div className="row-actions"><button onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></td></tr>)}</tbody></table></div>:<div className="data-card-grid">{displayedSubjects.map(subject=><article className={'data-record-card '+(!subject.active?'is-inactive':'')} key={subject.id}>
+          <div className="data-record-card-heading"><div><strong className="subject-card-name"><span className="subject-color-dot" style={{'--subject-color':subjectDisplayColor(subject)} as CSSProperties}/>{subject.name}</strong><small>{subject.code||'Sin código'} · {subject.stage}</small></div><span className="tag">{subjectTypeLabel(subject.type)}</span></div>
           <div className="data-record-card-data"><div><span>Duración</span><strong>{subject.defaultSessionMinutes?`${subject.defaultSessionMinutes} min`:'—'}</strong></div><div><span>Estado</span><strong>{subject.active?'Activa':'Inactiva'}</strong></div></div>
           <div className="data-record-card-footer"><button className={'status-toggle '+(subject.active?'active':'')} onClick={()=>toggleSubject(subject.id)}>{subject.active?'Activa':'Inactiva'}</button><div className="row-actions"><button title="Editar" onClick={()=>editSubject(subject)}><Pencil size={15}/></button><button title="Eliminar" className="danger" onClick={()=>removeSubject(subject.id)}><Trash2 size={15}/></button></div></div>
         </article>)}</div>}
