@@ -2976,8 +2976,8 @@ button.btn:disabled:hover{
   max-width:220px;
   padding:7px 9px;
   border-radius:8px;
-  background:#101010;
-  color:#fff;
+  background:var(--sidebar-tooltip-bg,#101010);
+  color:var(--sidebar-tooltip-text,#fff);
   font-size:8px;
   font-weight:750;
   line-height:1.2;
@@ -3008,4 +3008,62 @@ button.btn:disabled:hover{
 @media(max-width:780px){
   .collapsed-brand-toggle::after,
   .sidebar-tooltip::after{display:none}
+}
+
+
+/* === Collapsed navigation tooltips === */
+:root{
+  --sidebar-tooltip-bg:#101010;
+  --sidebar-tooltip-text:#ffffff;
+  --sidebar-tooltip-border:rgba(255,255,255,.08);
+}
+[data-theme="dark"]{
+  --sidebar-tooltip-bg:#f4f7fb;
+  --sidebar-tooltip-text:#102039;
+  --sidebar-tooltip-border:#d8e1eb;
+}
+.app-shell.is-collapsed .nav-list{
+  overflow:visible;
+}
+.nav-item-tooltip{
+  position:relative;
+}
+.nav-item-tooltip::after{
+  content:attr(data-tooltip);
+  position:absolute;
+  top:50%;
+  left:calc(100% + 10px);
+  transform:translateY(-50%) translateX(-4px);
+  z-index:120;
+  width:max-content;
+  max-width:240px;
+  padding:7px 9px;
+  border:1px solid var(--sidebar-tooltip-border);
+  border-radius:8px;
+  background:var(--sidebar-tooltip-bg);
+  color:var(--sidebar-tooltip-text);
+  font-size:8px;
+  font-weight:750;
+  line-height:1.2;
+  box-shadow:0 5px 16px rgba(0,0,0,.2);
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity .12s ease,transform .12s ease,visibility .12s ease;
+}
+.nav-item-tooltip:hover::after,
+.nav-item-tooltip:focus-visible::after{
+  opacity:1;
+  visibility:visible;
+  transform:translateY(-50%) translateX(0);
+}
+.nav-item-tooltip:focus-visible{
+  outline:2px solid #6d9bc8;
+  outline-offset:2px;
+}
+[data-theme="dark"] .nav-item-tooltip::after{
+  box-shadow:0 5px 16px rgba(0,0,0,.34);
+}
+@media(max-width:780px){
+  .nav-item-tooltip::after{display:none}
 }
