@@ -1149,10 +1149,11 @@ function SchedulePreview({
                     onDragEnd={()=>onDragEntry('')}
                     onClick={()=>onEdit(primary.id)}
                     title="Editar o mover sesión"
+                    aria-label={`Editar o mover ${subject?.name??'materia'} de ${group?.name??'grupo'}`}
                   >
                     <strong>{subject?.name??'Materia'}</strong>
                     <small>{teachers.join(' + ')}</small>
-                    <Pencil size={12}/>
+                    <Pencil className="schedule-entry-edit-icon" size={12}/>
                     {locks.some(lock=>lock.assignmentId===primary.assignmentId&&lock.day===primary.day&&lock.sessionId===primary.sessionId)&&<span className="schedule-cell-lock" title="Sesión bloqueada"><Lock size={11}/></span>}
                   </button>
                   {changed&&baselineRun&&<span className="proposal-diff-tooltip">{baselineCellLabel(project,baselineRun,groupId,day,block.id)}</span>}
@@ -1190,8 +1191,15 @@ function TeacherSchedulePreview({
             const subject=project.subjects.find(item=>item.id===entry.subjectId)?.name??'Materia'
             const group=project.groups.find(item=>item.id===entry.groupId)?.name??'Grupo'
             const assignment=project.assignments.find(item=>item.id===entry.assignmentId)
-            return <button type="button" className="schedule-entry-edit" key={entry.id} onClick={()=>onEdit(entry.id)}>
-              <strong>{subject}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><Pencil size={12}/>
+            return <button
+              type="button"
+              className="schedule-entry-edit"
+              key={entry.id}
+              onClick={()=>onEdit(entry.id)}
+              title="Editar sesión"
+              aria-label={`Editar ${subject} de ${group}`}
+            >
+              <strong>{subject}</strong><small>{group}{assignment?.assignmentType!=='main'?' · '+(assignment?.assignmentType==='support'?'Apoyo':'Codocencia'):''}</small><Pencil className="schedule-entry-edit-icon" size={12}/>
             </button>
           })}</td>
         })}
