@@ -85,7 +85,9 @@ export function GenerationPage({
   const [dragEntryId,setDragEntryId]=useState('')
   const [resultDetailsExpanded,setResultDetailsExpanded]=useState(false)
   const [filterDocked,setFilterDocked]=useState(false)
-  const filterSentinelRef=useRef<HTMLDivElement|null>(null)
+  const [filterDockGeometry,setFilterDockGeometry]=useState<{left:number;width:number}|null>(null)
+  const filterToolbarRef=useRef<HTMLDivElement|null>(null)
+  const generationResultRef=useRef<HTMLElement|null>(null)
   const [alternativeSimulation,setAlternativeSimulation]=useState<Record<string,{
     valid:boolean
     emptySlots:number
@@ -141,18 +143,43 @@ export function GenerationPage({
   },[selectedRun?.id,selectedRun?.status])
 
   useEffect(()=>{
-    const sentinel=filterSentinelRef.current
-    if(!sentinel||typeof IntersectionObserver==='undefined'){
-      setFilterDocked(false)
-      return
+    let frame=0
+    const updateDock=()=>{
+      cancelAnimationFrame(frame)
+      frame=requestAnimationFrame(()=>{
+        const filter=filterToolbarRef.current
+        const result=generationResultRef.current
+        if(!filter||!result){
+          setFilterDocked(false)
+          setFilterDockGeometry(null)
+          return
+        }
+        const topbarHeight=window.innerWidth<=780?64:72
+        const dockHeight=44
+        const filterRect=filter.getBoundingClientRect()
+        const resultRect=result.getBoundingClientRect()
+        const shouldDock=
+          filterRect.bottom<=topbarHeight&&
+          resultRect.bottom>topbarHeight+dockHeight
+
+        setFilterDocked(shouldDock)
+        if(shouldDock){
+          setFilterDockGeometry({left:filterRect.left,width:filterRect.width})
+        }else{
+          setFilterDockGeometry(null)
+        }
+      })
     }
-    const observer=new IntersectionObserver(([entry])=>{
-      const top=entry.boundingClientRect.top
-      setFilterDocked(!entry.isIntersecting&&top<72)
-    },{rootMargin:'-72px 0px 0px 0px',threshold:0})
-    observer.observe(sentinel)
-    return ()=>observer.disconnect()
-  },[selectedRun?.id])
+
+    updateDock()
+    window.addEventListener('scroll',updateDock,{passive:true})
+    window.addEventListener('resize',updateDock)
+    return ()=>{
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll',updateDock)
+      window.removeEventListener('resize',updateDock)
+    }
+  },[selectedRun?.id,viewMode,selectedGroupIds.join('|'),selectedTeacherId])
 
   const openScheduleEditor=(entryId:string,target?:{day:Weekday;sessionId:string})=>{
     if(!selectedRun)return
@@ -704,7 +731,7 @@ export function GenerationPage({
           {recommended&&<div className="proposal-recommendation"><Trophy size={17}/><span><strong>Propuesta recomendada: {runs.findIndex(run=>run.id===recommended.run.id)+1}.</strong> Se prioriza validez, menor penalización SOFT, menos huecos docentes, menos jornadas fragmentadas y, cuando existe referencia, menos cambios. La elección sigue siendo manual.</span></div>}
         </section>}
 
-        {selectedRun&&<section className={'generation-result '+(filterDocked?'has-filter-dock':'')}>
+        {selectedRun&&<section ref={generationResultRef} className={'generation-result '+(filterDocked?'has-filter-dock':'')}>
           <div className={'generation-result-heading '+(resultDetailsExpanded?'is-expanded':'is-collapsed')}>
             <div className="generation-result-heading-copy">
               <span className="panel-kicker">Resultado seleccionado</span>
@@ -768,8 +795,11 @@ export function GenerationPage({
             </div>}
           </>}
 
-          <div ref={filterSentinelRef} className="generation-filter-sentinel" aria-hidden="true"/>
-          <div className={'generation-filter-dock '+(filterDocked?'is-visible':'')} aria-hidden={!filterDocked}>
+          <div
+            className={'generation-filter-dock '+(filterDocked?'is-visible':'')}
+            aria-hidden={!filterDocked}
+            style={filterDockGeometry?{left:filterDockGeometry.left,width:filterDockGeometry.width}:undefined}
+          >
             <div className="generation-filter-dock-inner">
               <span className="generation-filter-dock-label">Filtro</span>
               <div className="generation-view-switch">
@@ -786,7 +816,7 @@ export function GenerationPage({
               </div>}
             </div>
           </div>
-          <div className="generation-toolbar generation-view-toolbar">
+          <div ref={filterToolbarRef} className="generation-toolbar generation-view-toolbar">
             <div className="generation-filter-stack">
               <span className="panel-kicker">Filtro</span>
               <div className="generation-view-switch">
