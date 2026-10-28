@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
-  AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, Info, Plus, RefreshCcw, Sparkles,
+  AlertTriangle, ArrowDownUp, CalendarCheck2, CalendarDays, CheckCircle2, ChevronDown, Info, Plus, RefreshCcw, Sparkles,
   Lock, Pencil, Trash2, Trophy, Undo2, Unlock, XCircle,
 } from 'lucide-react'
 import {
@@ -992,27 +992,68 @@ function SchedulePreview({
 }) {
   const teachingBlocks=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
   const draggedEntry=dragEntryId?run.entries.find(entry=>entry.id===dragEntryId)??null:null
+  const [expandedGroupIds,setExpandedGroupIds]=useState<string[]>(()=>groupIds.length<=1?[...groupIds]:groupIds.slice(0,1))
+
+  useEffect(()=>{
+    setExpandedGroupIds(current=>{
+      const available=current.filter(id=>groupIds.includes(id))
+      if(groupIds.length===0)return []
+      if(groupIds.length===1)return [groupIds[0]]
+      return available.length?available:[groupIds[0]]
+    })
+  },[groupIds.join('|')])
+
+  useEffect(()=>{
+    if(!draggedEntry)return
+    setExpandedGroupIds(current=>current.includes(draggedEntry.groupId)?current:[...current,draggedEntry.groupId])
+  },[draggedEntry?.id,draggedEntry?.groupId])
+
+  const allExpanded=groupIds.length>0&&groupIds.every(id=>expandedGroupIds.includes(id))
+  const toggleGroupExpanded=(groupId:string)=>{
+    if(draggedEntry?.groupId===groupId)return
+    setExpandedGroupIds(current=>current.includes(groupId)?current.filter(id=>id!==groupId):[...current,groupId])
+  }
+
   return <div className={'generation-multi-schedule '+(draggedEntry?'is-dragging':'')}>
+    {groupIds.length>1&&<div className="schedule-groups-display-actions">
+      <span>{expandedGroupIds.length} de {groupIds.length} grupos desplegados</span>
+      <div>
+        <button type="button" onClick={()=>setExpandedGroupIds([...groupIds])} disabled={allExpanded}>Desplegar todos</button>
+        <button type="button" onClick={()=>setExpandedGroupIds([])} disabled={expandedGroupIds.length===0||Boolean(draggedEntry)}>Plegar todos</button>
+      </div>
+    </div>}
     {groupIds.map(groupId=>{
       const group=project.groups.find(item=>item.id===groupId)
       const entries=run.entries.filter(entry=>entry.groupId===groupId)
       const isDragGroup=Boolean(draggedEntry&&draggedEntry.groupId===groupId)
       const isOtherGroup=Boolean(draggedEntry&&!isDragGroup)
+      const expanded=expandedGroupIds.includes(groupId)||isDragGroup
       return <section
-        className={'generation-group-schedule '+(isDragGroup?'schedule-drag-active-group ':'')+(isOtherGroup?'schedule-drag-disabled-group':'')}
+        className={'generation-group-schedule '+(expanded?'is-expanded ':'is-collapsed ')+(isDragGroup?'schedule-drag-active-group ':'')+(isOtherGroup?'schedule-drag-disabled-group':'')}
         key={groupId}
       >
         <div className="generation-group-heading">
-          <strong>{group?.name??'Grupo'}</strong>
-          {isDragGroup
-            ? <small className="schedule-drag-heading">Selecciona una franja verde</small>
-            : isOtherGroup
-              ? <small>Movimiento disponible solo dentro del grupo de origen</small>
-              : baselineRun&&run.id!==baselineRun.id
-                ? <small>{groupDifferenceCount(run,baselineRun,groupId)} cambios respecto a Propuesta 1</small>
-                : null}
+          <button
+            type="button"
+            className="generation-group-collapse"
+            onClick={()=>toggleGroupExpanded(groupId)}
+            aria-expanded={expanded}
+            aria-label={expanded?'Plegar '+(group?.name??'grupo'):'Desplegar '+(group?.name??'grupo')}
+          >
+            <ChevronDown size={16}/>
+          </button>
+          <div className="generation-group-heading-copy">
+            <strong>{group?.name??'Grupo'}</strong>
+            {isDragGroup
+              ? <small className="schedule-drag-heading">Selecciona una franja verde</small>
+              : isOtherGroup
+                ? <small>Movimiento disponible solo dentro del grupo de origen</small>
+                : baselineRun&&run.id!==baselineRun.id
+                  ? <small>{groupDifferenceCount(run,baselineRun,groupId)} cambios respecto a Propuesta 1</small>
+                  : <small>{entries.length} sesiones colocadas</small>}
+          </div>
         </div>
-        <div className="generated-schedule-wrap">
+        {expanded&&<div className="generated-schedule-wrap">
           <table className="generated-schedule">
             <thead><tr><th>Sesión</th>{days.map(day=><th key={day}>{dayLabels[day]}</th>)}</tr></thead>
             <tbody>{teachingBlocks.map(block=><tr key={block.id}>
@@ -1098,7 +1139,7 @@ function SchedulePreview({
               })}
             </tr>)}</tbody>
           </table>
-        </div>
+        </div>}
       </section>
     })}
   </div>
