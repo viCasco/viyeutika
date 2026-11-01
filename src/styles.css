@@ -3238,3 +3238,34 @@ button.btn:disabled:hover{
   background:color-mix(in srgb,var(--subject-color) 18%,#202c3b);
   color:#d9e4ef;
 }
+
+
+/* Substitution availability lookup */
+.substitutions-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 18px}
+.substitutions-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.substitutions-summary>div{padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.substitutions-summary strong{display:block;font-size:23px;color:var(--navy2)}
+.substitutions-summary span{display:block;font-size:11px;color:var(--muted)}
+.substitutions-filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px}
+.substitutions-filters button{border:1px solid var(--border);border-radius:9px;padding:8px 13px;background:var(--surface);cursor:pointer;font-size:12px;font-weight:700}
+.substitutions-filters button.selected{border-color:var(--green2);background:#eef9e9;color:#256b12}
+.substitutions-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.substitutions-teacher{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid var(--border);border-radius:11px;min-width:0}
+.substitutions-teacher>svg{color:var(--navy2);flex:0 0 auto}
+.substitutions-teacher>div{flex:1;min-width:0}
+.substitutions-teacher strong,.substitutions-teacher small{display:block;overflow-wrap:anywhere}
+.substitutions-teacher strong{font-size:12px}.substitutions-teacher small{color:var(--muted);font-size:10px;margin-top:3px}
+.substitutions-state{font-size:10px;font-weight:800;border-radius:20px;padding:5px 8px;white-space:nowrap}
+.substitutions-state.free{background:#eef9e9;color:#286a18}
+.substitutions-state.avoid{background:#fff2d8;color:#8a5b00}
+.substitutions-state.blocked{background:#ffe8e8;color:#a52e2e}
+.substitutions-state.busy{background:#e9eef6;color:#506078}
+.substitutions-help,.substitutions-empty,.substitutions-note{color:var(--muted);font-size:12px;line-height:1.6;margin-top:16px}
+.substitutions-warning{padding:10px 12px;border:1px solid #e8bd72;background:#fff6e7;border-radius:10px;font-size:12px;color:#79520f}
+.substitutions-note button{border:0;background:transparent;color:var(--navy2);font-weight:800;cursor:pointer}
+@media(max-width:780px){.substitutions-controls{grid-template-columns:1fr}.substitutions-results{grid-template-columns:1fr}.substitutions-summary{gap:6px}.substitutions-summary>div{padding:9px}.substitutions-summary strong{font-size:20px}}
+[data-theme="dark"] .substitutions-state.free,[data-theme="dark"] .substitutions-filters button.selected{background:#1c3320;color:#acec9b}
+[data-theme="dark"] .substitutions-state.avoid{background:#3c3016;color:#f5d08c}
+[data-theme="dark"] .substitutions-state.blocked{background:#3c2020;color:#f6a3a3}
+[data-theme="dark"] .substitutions-state.busy{background:#273245;color:#bacce4}
+[data-theme="dark"] .substitutions-warning{background:#3b2b18;color:#f0cb86}
