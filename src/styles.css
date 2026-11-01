@@ -3269,3 +3269,48 @@ button.btn:disabled:hover{
 [data-theme="dark"] .substitutions-state.blocked{background:#3c2020;color:#f6a3a3}
 [data-theme="dark"] .substitutions-state.busy{background:#273245;color:#bacce4}
 [data-theme="dark"] .substitutions-warning{background:#3b2b18;color:#f0cb86}
+
+
+/* Weekly substitution grid: follow the timetable visual hierarchy */
+.substitutions-toolbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.substitutions-reference{width:min(320px,100%)}
+.substitutions-toolbar .substitutions-filters{margin:0}
+.substitutions-grid-hint{font-size:11px;color:var(--muted);margin:0 0 10px}
+.substitutions-grid-scroll{overflow-x:auto;max-width:100%;border:1px solid var(--border);border-radius:12px}
+.substitutions-week-grid{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;min-width:860px}
+.substitutions-week-grid thead th{padding:14px 9px;background:#e8eef5;border-right:1px solid var(--border);border-bottom:1px solid var(--border);text-align:center;color:#35516d;font-size:11px;letter-spacing:.055em;text-transform:uppercase;font-weight:850}
+.substitutions-week-grid thead th:first-child{width:148px}
+.substitutions-week-grid thead th:last-child,.substitutions-week-grid tbody td:last-child{border-right:0}
+.substitutions-week-grid tbody th{padding:12px 13px;text-align:left;vertical-align:middle;background:#f1f5fa;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.substitutions-week-grid tbody th strong,.substitutions-week-grid tbody th small{display:block}
+.substitutions-week-grid tbody th strong{font-size:11px;color:#283f59}
+.substitutions-week-grid tbody th small{font-size:10px;color:#708297;margin-top:5px}
+.substitutions-week-grid tbody td{padding:0;vertical-align:top;border-right:1px solid var(--border);border-bottom:1px solid var(--border)}
+.substitutions-week-grid tbody tr:last-child td,.substitutions-week-grid tbody tr:last-child th{border-bottom:0}
+.substitutions-slot{border:0;width:100%;min-height:116px;height:100%;padding:10px 11px;background:var(--surface);display:flex;flex-direction:column;align-items:stretch;gap:7px;text-align:left;cursor:pointer;color:inherit}
+.substitutions-slot:hover{background:color-mix(in srgb,var(--green) 7%,var(--surface))}
+.substitutions-slot:focus-visible{outline:3px solid var(--green2);outline-offset:-3px;position:relative;z-index:1}
+.substitutions-slot.is-empty{background:color-mix(in srgb,var(--muted) 4%,var(--surface))}
+.substitutions-slot-header{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.substitutions-slot-header strong{font-size:11px;color:var(--navy2)}
+.substitutions-slot-header>span{font-size:9px;color:var(--muted);white-space:nowrap}
+.substitutions-slot-names{display:flex;flex-direction:column;gap:4px}
+.substitutions-slot-name{font-size:11px;line-height:1.25;overflow-wrap:anywhere;color:var(--navy)}
+.substitutions-slot-name small{font-size:9px;color:var(--muted)}
+.substitutions-slot-name.avoid{color:#966400}
+.substitutions-slot-name.blocked{color:#b84444}
+.substitutions-slot-name.busy{color:#647388}
+.substitutions-slot-more,.substitutions-slot-empty{font-size:10px;color:var(--muted)}
+.substitutions-slot-more{font-weight:800;color:var(--navy2);margin-top:auto}
+.substitutions-modal-time{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin:0 0 16px}
+.substitutions-detail-group{margin:15px 0 20px}
+.substitutions-detail-group h3{font-size:13px;font-weight:800;margin:0 0 9px;display:flex;align-items:center;gap:8px}
+.substitutions-detail-group h3 span{display:inline-flex;align-items:center;justify-content:center;min-width:20px;padding:2px 7px;border-radius:10px;background:var(--border);font-size:10px}
+.substitutions-detail-group .substitutions-empty{margin:4px 0 8px}
+[data-theme="dark"] .substitutions-week-grid thead th,[data-theme="dark"] .substitutions-week-grid tbody th{background:#253348;color:#e0eaf5}
+[data-theme="dark"] .substitutions-week-grid tbody th strong{color:#e0eaf5}
+[data-theme="dark"] .substitutions-slot-name{color:#e0eaf5}
+[data-theme="dark"] .substitutions-slot-name.avoid{color:#efc67c}
+[data-theme="dark"] .substitutions-slot-name.blocked{color:#e8a1a1}
+[data-theme="dark"] .substitutions-slot-name.busy{color:#a5b1c2}
+@media(max-width:780px){.substitutions-toolbar{align-items:stretch}.substitutions-reference{width:100%}.substitutions-slot{min-height:104px}}
