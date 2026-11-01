@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_PROJECT, type GenerationRun, type ViyeuticaProject } from '../domain/project'
-import { candidatesForSlot } from './SubstitutionsPage'
+import { candidatesForFilter, candidatesForSlot } from './SubstitutionsPage'
 
 const run: GenerationRun = {
   id: 'test', createdAt: '', status: 'complete', score: 0, hardViolations: 0,
@@ -47,5 +47,21 @@ describe('candidatesForSlot', () => {
     const project=fixture()
     project.teachers[1].active=false
     expect(candidatesForSlot(project,run,'L','h1').some(item=>item.id==='t2')).toBe(false)
+  })
+})
+
+describe('candidatesForFilter', () => {
+  it('filters available, no-class and all across the same slot', () => {
+    const candidates = candidatesForSlot(fixture(), run, 'L', 'h1')
+    expect(candidatesForFilter(candidates, 'available').map(candidate=>candidate.id)).toEqual(['t2','t4'])
+    expect(candidatesForFilter(candidates, 'no-class').map(candidate=>candidate.id)).toEqual(['t2','t3','t4','t5'])
+    expect(candidatesForFilter(candidates, 'all')).toHaveLength(5)
+  })
+
+  it('does not mutate the source candidates', () => {
+    const candidates = candidatesForSlot(fixture(), run, 'L', 'h1')
+    const before = JSON.stringify(candidates)
+    candidatesForFilter(candidates, 'available')
+    expect(JSON.stringify(candidates)).toBe(before)
   })
 })
