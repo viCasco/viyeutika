@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CalendarDays, ChevronDown, ClipboardCheck,
-  FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose, PanelLeftOpen,
+  FileSearch, Gauge, GraduationCap, Home, LayoutGrid, Menu, PanelLeftClose, PanelLeftOpen, CalendarSearch,
   ShieldCheck, SlidersHorizontal, Sparkles, Users, X,
 } from 'lucide-react'
 import { Logo } from './components/Logo'
@@ -20,6 +20,7 @@ import { AssignmentsPage } from './pages/AssignmentsPage'
 import { RulesPage } from './pages/RulesPage'
 import { PrevalidationPage } from './pages/PrevalidationPage'
 import { GenerationPage } from './pages/GenerationPage'
+import { SubstitutionsPage } from './pages/SubstitutionsPage'
 import { useProject } from './hooks/useProject'
 import { useTheme } from './hooks/useTheme'
 
@@ -36,6 +37,7 @@ const navigation = [
   { path: '/reglas', label: 'Reglas', icon: ShieldCheck },
   { path: '/prevalidacion', label: 'Prevalidación', icon: ClipboardCheck },
   { path: '/horarios', label: 'Horarios', icon: CalendarDays },
+  { path: '/sustituciones', label: 'Sustituciones', icon: CalendarSearch },
 ]
 
 const descriptions: Record<string,string> = {
@@ -46,6 +48,7 @@ const descriptions: Record<string,string> = {
   '/reglas': 'Restricciones legales, reglas del centro y preferencias ponderadas.',
   '/prevalidacion': 'Comprobación de integridad antes de ejecutar la generación automática.',
   '/horarios': 'Generación, comparación y revisión de propuestas de horario.',
+  '/sustituciones': 'Consulta del profesorado sin clase asignada por día y sesión.',
 }
 
 const getRoute = () => {
@@ -97,6 +100,7 @@ export default function App() {
     if (route === '/reglas') return <RulesPage project={project} navigate={go}/>
     if (route === '/prevalidacion') return <PrevalidationPage project={project} navigate={go}/>
     if (route === '/horarios') return <GenerationPage project={project} navigate={go}/>
+    if (route === '/sustituciones') return <SubstitutionsPage project={project} navigate={go}/>
     return <PlaceholderPage title={active.label} description={descriptions[route] ?? 'Módulo preparado para su implementación.'}/>
   }
 
