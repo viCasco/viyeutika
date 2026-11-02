@@ -3395,60 +3395,6 @@ button.btn:disabled:hover{
 .daily-substitutions-copy-feedback{flex:1;min-width:200px;color:var(--muted);font-size:11px}
 @media(max-width:650px){.substitution-summary-actions{flex-wrap:wrap;justify-content:flex-end}.daily-substitutions-copy-feedback{flex-basis:100%}}
 
-/* Dedicated export layout: preserve the modal frame, margins and three-column session grid.
-   The capture node is offscreen but rendered so html-to-image can rasterize it. */
-.daily-substitutions-export-shell{
-  position:fixed;
-  left:-20000px;
-  top:0;
-  width:1440px;
-  box-sizing:border-box;
-  padding:20px;
-  z-index:-1;
-  pointer-events:none;
-  background:#eef1f6;
-  --surface:#ffffff;
-  --navy:#142b4e;
-  --navy2:#173e70;
-  --muted:#62718a;
-  --border:#dbe4ef;
-  color:#142b4e;
-  font-family:inherit;
-}
-.daily-substitutions-export-card{
-  overflow:hidden;
-  width:100%;
-  border-radius:22px;
-  border:1px solid #dbe4ef;
-  background:#ffffff;
-  box-shadow:0 12px 28px rgba(15,37,65,.09);
-}
-.daily-substitutions-export-header{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  min-height:88px;
-  box-sizing:border-box;
-  padding:24px 30px;
-  background:#ffffff;
-  border-bottom:1px solid #dbe4ef;
-  color:#142b4e;
-}
-.daily-substitutions-export-header strong{font-size:22px;line-height:1.25}
-.daily-substitutions-export-body{
-  box-sizing:border-box;
-  background:#ffffff;
-  padding:26px 30px 30px;
-}
-.daily-substitutions-export-shell .daily-substitutions-intro{padding:8px 0 18px;margin-bottom:20px}
-.daily-substitutions-export-shell .daily-substitutions-grid{
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:16px;
-  margin:0;
-}
-.daily-substitutions-export-shell .daily-substitutions-names{
-  grid-template-columns:repeat(2,minmax(0,1fr));
-}
-.daily-substitutions-export-shell .daily-substitutions-session{background:#ffffff}
-.daily-substitutions-export-shell .daily-substitutions-session-header{background:#eff3f8}
-.daily-substitutions-export-shell .daily-substitutions-item{background:#ffffff}
+
+/* Full-height modal clone for exported substitutions; keep its existing header and spacing. */
+.daily-substitutions-capture{min-width:0}
