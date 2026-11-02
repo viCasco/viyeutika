@@ -44,6 +44,7 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
         backgroundColor:'#ffffff',
         pixelRatio:2,
         cacheBust:true,
+        style:{position:'relative',left:'0',top:'0',pointerEvents:'auto',zIndex:'auto'},
       }).then(blob=>{
         if(!blob)throw new Error('No se pudo crear la captura PNG.')
         return blob
@@ -71,18 +72,7 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
       subject:project.subjects.find(item=>item.id===assignment?.subjectId)?.name??'Materia no encontrada'}
   }
 
-  return <AppModal title={'Coberturas · '+title} icon={<Eye size={19}/>} onClose={onClose} wide
-    footer={<div className="daily-substitutions-footer-actions">
-      <div className="daily-substitutions-copy-feedback" role="status" aria-live="polite">
-        {copyStatus==='success'?'Captura copiada. Pégala en WhatsApp o en un mensaje.':copyStatus==='error'?copyError:''}
-      </div>
-      <button type="button" className="btn ghost-inline" onClick={copyCapture} disabled={copyStatus==='copying'}>
-        {copyStatus==='success'?<Check size={16}/>:<ClipboardCopy size={16}/>}
-        {copyStatus==='copying'?'Copiando…':copyStatus==='success'?'Copiada':'Copiar captura'}
-      </button>
-      <button type="button" className="btn primary" onClick={onClose}>Cerrar</button>
-    </div>}>
-    <div ref={captureRef} className="daily-substitutions-capture">
+  const renderReport=(forExport:boolean)=><>
       <div className="daily-substitutions-intro">
         <div><strong>⩒Yeutika · Cuadrante diario de sustituciones</strong><p><CalendarDays size={14}/>{title}</p></div>
         <span>{records.length} {records.length===1?'cobertura':'coberturas'} · {planned} previstas · {completed} realizadas</span>
@@ -107,14 +97,36 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
                   <p><strong>Aula:</strong> {place.room}</p>
                   {record.coverageType==='co_teacher'&&<p>Permanece el codocente del grupo.</p>}
                   {record.notes&&<p><strong>Observaciones:</strong> {record.notes}</p>}
-                  <span className={'daily-substitutions-status '+record.status}>{record.status==='completed'?'Realizada':'Prevista'}</span>
+                  {!forExport&&<span className={'daily-substitutions-status '+record.status}>{record.status==='completed'?'Realizada':'Prevista'}</span>}
                 </article>
               })}
             </div>:<p className="daily-substitutions-no-cover">No se han registrado coberturas para esta sesión.</p>}
           </section>
         })}
       </div>
-      <p className="daily-substitutions-footer">Información del registro de ⩒Yeutika para la fecha indicada. Las coberturas previstas están pendientes de confirmación.</p>
+      {!forExport&&<p className="daily-substitutions-footer">Información del registro de ⩒Yeutika para la fecha indicada. Las coberturas previstas están pendientes de confirmación.</p>}
+  </>
+
+  return <AppModal title={'Coberturas · '+title} icon={<Eye size={19}/>} onClose={onClose} wide
+    footer={<div className="daily-substitutions-footer-actions">
+      <div className="daily-substitutions-copy-feedback" role="status" aria-live="polite">
+        {copyStatus==='success'?'Captura copiada. Pégala en WhatsApp o en un mensaje.':copyStatus==='error'?copyError:''}
+      </div>
+      <button type="button" className="btn ghost-inline" onClick={copyCapture} disabled={copyStatus==='copying'}>
+        {copyStatus==='success'?<Check size={16}/>:<ClipboardCopy size={16}/>}
+        {copyStatus==='copying'?'Copiando…':copyStatus==='success'?'Copiada':'Copiar captura'}
+      </button>
+      <button type="button" className="btn primary" onClick={onClose}>Cerrar</button>
+    </div>}>
+    <div className="daily-substitutions-capture">{renderReport(false)}</div>
+    <div ref={captureRef} className="daily-substitutions-export-shell" aria-hidden="true">
+      <div className="daily-substitutions-export-card">
+        <header className="daily-substitutions-export-header">
+          <Eye size={22} aria-hidden="true"/>
+          <strong>{'Coberturas · '+title}</strong>
+        </header>
+        <div className="daily-substitutions-export-body">{renderReport(true)}</div>
+      </div>
     </div>
   </AppModal>
 }
