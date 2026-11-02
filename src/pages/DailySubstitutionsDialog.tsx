@@ -112,7 +112,7 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
                   <p><strong>Aula:</strong> {place.room}</p>
                   {record.coverageType==='co_teacher'&&<p>Permanece el codocente del grupo.</p>}
                   {record.notes&&<p><strong>Observaciones:</strong> {record.notes}</p>}
-                  <span className={'daily-substitutions-status '+record.status}>{record.status==='completed'?'Realizada':'Prevista'}</span>}
+                  <span className={'daily-substitutions-status '+record.status}>{record.status==='completed'?'Realizada':'Prevista'}</span>
                 </article>
               })}
             </div>:<p className="daily-substitutions-no-cover">No se han registrado coberturas para esta sesión.</p>}
