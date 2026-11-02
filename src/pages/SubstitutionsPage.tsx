@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { CalendarSearch, UserRoundPlus, Users } from 'lucide-react'
+import { CalendarSearch, Eye, UserRoundPlus, Users } from 'lucide-react'
 import { SubstitutionTeacherDialog } from './SubstitutionTeacherDialog'
-import { SessionSubstitutionRegister, type SubstitutionSlotRequest } from './SessionSubstitutionRegister'
+import { SessionSubstitutionRegister, dateForWeekday, type SubstitutionSlotRequest } from './SessionSubstitutionRegister'
+import { DailySubstitutionsDialog, substitutionsForDay } from './DailySubstitutionsDialog'
 import {
   latestGeneration,
   type GenerationRun,
@@ -99,6 +100,7 @@ export function SubstitutionsPage({ project, navigate }: {
   const [filter, setFilter] = useState<ViewFilter>('available')
   const [detailSlot, setDetailSlot] = useState<{ day: Weekday; sessionId: string } | null>(null)
   const [registrationSlot, setRegistrationSlot] = useState<SubstitutionSlotRequest | null>(null)
+  const [dailyReport, setDailyReport] = useState<{day:Weekday;date:string}|null>(null)
 
   const selected = runs.find(item => item.key === sourceKey) ??
     runs.find(item => item.run.id === preferredId) ?? runs[0]
@@ -162,7 +164,18 @@ export function SubstitutionsPage({ project, navigate }: {
           <p className="substitutions-grid-hint">Utiliza los dos iconos de cada sesión: registrar una ausencia o consultar el detalle de disponibilidad.</p>
           <div className="substitutions-grid-scroll" role="region" aria-label="Horario semanal de sustituciones" tabIndex={0}>
             <table className="substitutions-week-grid">
-              <thead><tr><th scope="col">Sesión</th>{activeDays.map(day => <th scope="col" key={day}>{DAY_LABELS[day]}</th>)}</tr></thead>
+              <thead><tr><th scope="col">Sesión</th>{activeDays.map(day => {
+                const date=dateForWeekday(day)
+                const total=substitutionsForDay(project,date).length
+                return <th scope="col" key={day}>
+                  <div className="substitutions-day-heading">
+                    <span>{DAY_LABELS[day]}</span>
+                    {total>0&&<button type="button" className="substitutions-day-view" title={'Ver '+total+' coberturas del '+date}
+                      aria-label={'Ver sustituciones del '+DAY_LABELS[day]+' '+date}
+                      onClick={()=>setDailyReport({day,date})}><Eye size={17}/></button>}
+                  </div>
+                </th>
+              })}</tr></thead>
               <tbody>
                 {sessions.map((session, index) => <tr key={session.id}>
                   <th scope="row"><strong>{session.label || (index + 1) + '.ª sesión'}</strong><small>{session.start}–{session.end}</small></th>
@@ -203,6 +216,7 @@ export function SubstitutionsPage({ project, navigate }: {
         </>}
     </section>
     <SessionSubstitutionRegister project={project} slotRequest={registrationSlot} candidatesFor={coverageCandidates}/>
+    {dailyReport&&<DailySubstitutionsDialog project={project} day={dailyReport.day} date={dailyReport.date} onClose={()=>setDailyReport(null)}/>}
     {detailSlot && detailSession && <SubstitutionTeacherDialog
       title={DAY_LABELS[detailSlot.day]+' · '+detailSession.label}
       time={detailSession.start+'–'+detailSession.end}
