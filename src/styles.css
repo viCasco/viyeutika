@@ -3314,3 +3314,31 @@ button.btn:disabled:hover{
 [data-theme="dark"] .substitutions-slot-name.blocked{color:#e8a1a1}
 [data-theme="dark"] .substitutions-slot-name.busy{color:#a5b1c2}
 @media(max-width:780px){.substitutions-toolbar{align-items:stretch}.substitutions-reference{width:100%}.substitutions-slot{min-height:104px}}
+
+
+/* Substitutions: compact independent actions and record sections */
+.substitutions-slot{cursor:default}
+.substitutions-slot:hover{background:var(--surface)}
+.substitutions-cell-actions{display:inline-flex;gap:3px;align-items:center}
+.substitution-cell-action{width:27px;height:27px;display:inline-flex;align-items:center;justify-content:center;border:1px solid transparent;border-radius:7px;color:var(--navy2);background:transparent;cursor:pointer}
+.substitution-cell-action:hover:not(:disabled),.substitution-cell-action:focus-visible{background:color-mix(in srgb,var(--green) 12%,var(--surface));border-color:var(--border);outline-offset:1px}
+.substitution-cell-action:disabled{color:var(--muted);cursor:not-allowed;opacity:.35}
+.substitution-counter-summary{display:flex;gap:8px;flex-wrap:wrap}
+.substitution-counter-summary span{padding:6px 10px;border-radius:9px;border:1px solid var(--border);font-size:11px;font-weight:750;color:var(--muted)}
+.substitution-register-section{margin-top:14px}
+.substitution-history-date{display:flex;align-items:flex-end;gap:10px;padding:10px 16px}
+.substitution-history-date .form-field{width:min(240px,100%)}
+.substitution-history-actions{display:flex;gap:6px;align-items:center}
+.substitution-form-table td{vertical-align:middle}
+.substitution-form-description{margin:10px 0;font-size:12px;color:var(--muted)}
+.substitution-picker-field{display:flex;align-items:center;gap:10px}
+.substitution-pick-button{width:35px;height:35px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--navy2)}
+.substitution-pick-button:hover:not(:disabled),.substitution-pick-button:focus-visible{border-color:var(--green2);background:color-mix(in srgb,var(--green) 10%,var(--surface))}
+.substitution-pick-button:disabled{opacity:.35;cursor:not-allowed}
+.substitution-chosen-label{color:var(--navy2);font-size:12px;font-weight:750}
+.substitution-unselected{color:var(--muted);font-size:11px}
+.substitutions-teacher.selectable{width:100%;background:var(--surface);text-align:left;cursor:pointer;font:inherit;color:inherit}
+.substitutions-teacher.selectable:hover,.substitutions-teacher.selectable:focus-visible{border-color:var(--green2);background:color-mix(in srgb,var(--green) 8%,var(--surface))}
+.substitutions-teacher.chosen{border-color:var(--green2)}
+.substitute-choice-label{font-size:10px;font-weight:800;color:var(--navy2);white-space:nowrap}
+@media(max-width:780px){.substitution-history-date{flex-wrap:wrap}.substitution-counter-summary{margin-top:6px}.substitutions-cell-actions{gap:2px}}
