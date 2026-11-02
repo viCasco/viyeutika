@@ -8,13 +8,12 @@ import { teacherIsUnavailable } from '../domain/validationEngine'
 const weekdays:Weekday[]=['L','M','X','J','V','S']
 const dayName:Record<Weekday,string>={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado'}
 const dateDay=(date:string):Weekday|null=>{
-  if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(date))return null
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return null
   const number=new Date(date+'T12:00:00').getDay()
   return number===0?null:weekdays[number-1]
 }
 const id=()=> 'sub_'+crypto.randomUUID()
 
-type CoverageChoice={entry:GeneratedScheduleEntry;teacherId:string;coverageType:'substitute'|'co_teacher'}
 type EntryOption={id:string;label:string;kind:'substitute'|'co_teacher'}
 
 export function isSubstituteEligible(
