@@ -48,7 +48,7 @@ const descriptions: Record<string,string> = {
   '/reglas': 'Restricciones legales, reglas del centro y preferencias ponderadas.',
   '/prevalidacion': 'Comprobación de integridad antes de ejecutar la generación automática.',
   '/horarios': 'Generación, comparación y revisión de propuestas de horario.',
-  '/sustituciones': 'Consulta del profesorado sin clase asignada por día y sesión.',
+  '/sustituciones': 'Planificación y registro de coberturas por sesión e historial de sustituciones.',
 }
 
 const getRoute = () => {
