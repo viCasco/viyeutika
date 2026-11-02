@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { CalendarSearch, Clock3, Users } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
+import { SessionSubstitutionRegister } from './SessionSubstitutionRegister'
 import {
   latestGeneration,
   type GenerationRun,
@@ -135,6 +136,7 @@ export function SubstitutionsPage({ project, navigate }: {
       </div>
     </section>
 
+    <SessionSubstitutionRegister project={project}/>
     <section className="panel">
       <div className="substitutions-toolbar">
         <label className="form-field substitutions-reference"><span>Horario de referencia</span>
