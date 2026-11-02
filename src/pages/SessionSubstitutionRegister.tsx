@@ -4,7 +4,7 @@ import { AppModal } from '../components/AppModal'
 import { saveProject } from '../store/projectStorage'
 import type { GeneratedScheduleEntry, SubstitutionRecord, ViyeuticaProject, Weekday } from '../domain/project'
 import { teacherIsUnavailable } from '../domain/validationEngine'
-import { SortableTh, cycleSort, sortCollection, type SortState } from '../components/DataCollectionView'
+import { SortableTh, sortCollection, type SortState } from '../components/DataCollectionView'
 import { SubstitutionTeacherDialog, type CandidateDetail } from './SubstitutionTeacherDialog'
 
 const weekdays:Weekday[]=['L','M','X','J','V','S']
@@ -130,7 +130,7 @@ export function SessionSubstitutionRegister({
       .sort((a,b)=>a.name.localeCompare(b.name,'es'))
   },[project.teachers,dayEntries,initialSessionId])
   const lessonEntries=useMemo(()=>dayEntries.filter(entry=>entry.teacherId===absentTeacherId)
-    .sort((a,b)=>blocks.findIndex(b=>b.id===a.sessionId)-blocks.findIndex(b=>b.id===b.sessionId)),
+    .sort((a,b)=>blocks.findIndex(block=>block.id===a.sessionId)-blocks.findIndex(block=>block.id===b.sessionId)),
     [dayEntries,absentTeacherId,blocks])
   const records=project.substitutionRecords??[]
   const existingFor=(entry:GeneratedScheduleEntry)=>records.find(record=>
