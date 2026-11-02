@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_PROJECT, type GeneratedScheduleEntry, type ViyeuticaProject } from '../domain/project'
-import { coverageOptions, isSubstituteEligible } from './SessionSubstitutionRegister'
+import { coverageOptions, dateForWeekday, isSubstituteEligible } from './SessionSubstitutionRegister'
 
 const entry:GeneratedScheduleEntry={
   id:'e1',assignmentId:'a1',groupId:'g1',subjectId:'s1',teacherId:'t1',day:'L',sessionId:'h1',
@@ -42,5 +42,22 @@ describe('Cobertura de sustituciones por sesión',()=>{
       coverageType:'substitute',status:'planned',notes:'',createdAt:''}]
     expect(isSubstituteEligible(p,'2026-11-02',entry,'t2')).toBe(false)
     expect(isSubstituteEligible(p,'2026-11-03',entry,'t5')).toBe(false)
+  })
+})
+
+describe('fecha sugerida desde la cuadrícula',()=>{
+  const monday=new Date(2026,10,2,14,30)
+  it('uses today when the clicked day is today',()=>{
+    expect(dateForWeekday('L',monday)).toBe('2026-11-02')
+  })
+  it('moves forward within the current week',()=>{
+    expect(dateForWeekday('M',monday)).toBe('2026-11-03')
+    expect(dateForWeekday('V',monday)).toBe('2026-11-06')
+  })
+  it('uses the next week for past weekdays',()=>{
+    expect(dateForWeekday('L',new Date(2026,10,3))).toBe('2026-11-09')
+  })
+  it('handles a month boundary without UTC offset',()=>{
+    expect(dateForWeekday('L',new Date(2026,10,29))).toBe('2026-11-30')
   })
 })
