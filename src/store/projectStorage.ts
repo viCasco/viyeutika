@@ -70,6 +70,7 @@ export function loadProject(): ViyeuticaProject {
       establishedScheduleRun,
       establishedScheduleSavedAt,
       establishedScheduleNeedsRevalidation: Boolean(parsed.establishedScheduleNeedsRevalidation),
+      substitutionRecords: Array.isArray(parsed.substitutionRecords) ? parsed.substitutionRecords : [],
       normativeSources: Array.isArray(parsed.normativeSources) ? parsed.normativeSources : [],
       normativeRules: Array.isArray(parsed.normativeRules) ? parsed.normativeRules : [],
       schedule: {
@@ -111,6 +112,8 @@ function configurationFingerprint(project:ViyeuticaProject){
     establishedScheduleRun:_establishedScheduleRun,
     establishedScheduleSavedAt:_establishedScheduleSavedAt,
     establishedScheduleNeedsRevalidation:_establishedScheduleNeedsRevalidation,
+    substitutionRecords:_substitutionRecords,
+    temporaryChanges:_temporaryChanges,
     updatedAt:_updatedAt,
     ...configuration
   }=project
