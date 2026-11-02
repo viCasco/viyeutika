@@ -3342,3 +3342,35 @@ button.btn:disabled:hover{
 .substitutions-teacher.chosen{border-color:var(--green2)}
 .substitute-choice-label{font-size:10px;font-weight:800;color:var(--navy2);white-space:nowrap}
 @media(max-width:780px){.substitution-history-date{flex-wrap:wrap}.substitution-counter-summary{margin-top:6px}.substitutions-cell-actions{gap:2px}}
+
+
+/* Daily substitutions summary for staff screenshot sharing */
+.substitutions-day-heading{display:flex;align-items:center;justify-content:center;gap:8px}
+.substitutions-day-view{width:27px;height:27px;display:inline-flex;justify-content:center;align-items:center;border:1px solid color-mix(in srgb,var(--navy2) 25%,transparent);background:var(--surface);border-radius:7px;color:var(--navy2);cursor:pointer}
+.substitutions-day-view:hover,.substitutions-day-view:focus-visible{background:color-mix(in srgb,var(--green) 12%,var(--surface));outline-offset:2px}
+.daily-substitutions-capture{background:var(--surface);padding:4px 0}
+.daily-substitutions-intro{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 0 15px;border-bottom:1px solid var(--border)}
+.daily-substitutions-intro strong{font-size:14px;color:var(--navy)}
+.daily-substitutions-intro p{margin:6px 0 0;display:flex;align-items:center;gap:7px;color:var(--muted);font-size:12px}
+.daily-substitutions-intro>span{font-size:11px;font-weight:800;color:var(--navy2);white-space:nowrap}
+.daily-substitutions-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:10px;margin:14px 0}
+.daily-substitutions-session{border:1px solid var(--border);border-radius:11px;overflow:hidden;min-width:0;background:var(--surface)}
+.daily-substitutions-session-header{background:color-mix(in srgb,var(--navy2) 7%,var(--surface));border-bottom:1px solid var(--border);padding:11px 12px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.daily-substitutions-session-header strong{font-size:12px;color:var(--navy)}
+.daily-substitutions-session-header span{font-size:10px;color:var(--muted)}
+.daily-substitutions-session-header small{margin-left:auto;font-size:9px;color:var(--navy2);font-weight:800}
+.daily-substitutions-items{padding:9px;display:flex;flex-direction:column;gap:9px}
+.daily-substitutions-item{border:1px solid var(--border);border-radius:8px;padding:10px;overflow-wrap:anywhere}
+.daily-substitutions-names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:8px}
+.daily-substitutions-names span,.daily-substitutions-names strong{display:block}
+.daily-substitutions-names span{font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:750}
+.daily-substitutions-names strong{font-size:12px;margin-top:3px;color:var(--navy)}
+.daily-substitutions-item p{font-size:11px;color:var(--muted);margin:5px 0;line-height:1.4}
+.daily-substitutions-item p svg{vertical-align:middle}
+.daily-substitutions-item p strong{color:var(--navy)}
+.daily-substitutions-status{display:inline-flex;margin-top:8px;padding:4px 7px;border-radius:7px;font-size:10px;font-weight:800;border:1px solid var(--border)}
+.daily-substitutions-status.planned{color:#936417;background:#fff4db;border-color:#f2d79f}
+.daily-substitutions-status.completed{color:#276928;background:#e9f8e9;border-color:#b7dfb8}
+.daily-substitutions-no-cover{padding:12px;font-size:11px;color:var(--muted);margin:0}
+.daily-substitutions-footer{font-size:10px;color:var(--muted);margin:12px 0 4px}
+@media(max-width:650px){.daily-substitutions-grid{grid-template-columns:1fr}.daily-substitutions-names{grid-template-columns:1fr}}
