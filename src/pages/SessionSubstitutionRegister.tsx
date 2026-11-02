@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react'
-import { CalendarDays, CheckCircle2, ClipboardList, Plus, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarDays, CheckCircle2, ClipboardList, UserRoundPlus, Trash2 } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
 import { saveProject } from '../store/projectStorage'
 import type { GeneratedScheduleEntry, SubstitutionRecord, ViyeuticaProject, Weekday } from '../domain/project'
 import { teacherIsUnavailable } from '../domain/validationEngine'
+import { SortableTh, cycleSort, sortCollection, type SortState } from '../components/DataCollectionView'
+import { SubstitutionTeacherDialog, type CandidateDetail } from './SubstitutionTeacherDialog'
 
 const weekdays:Weekday[]=['L','M','X','J','V','S']
 const dayName:Record<Weekday,string>={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado'}
@@ -60,142 +62,234 @@ function byGroup(project:ViyeuticaProject,groupId:string){
   return project.groups.find(g=>g.id===groupId)?.name??'Grupo no disponible'
 }
 
-export function SessionSubstitutionRegister({project}:{project:ViyeuticaProject}){
-  const initialDate=new Date().toLocaleDateString('sv-SE')
-  const [date,setDate]=useState(initialDate)
+
+export interface SubstitutionSlotRequest {
+  day:Weekday
+  sessionId:string
+  requestId:number
+}
+
+export function dateForWeekday(day:Weekday,today:Date=new Date()):string{
+  const current=new Date(today.getFullYear(),today.getMonth(),today.getDate(),12)
+  const target=weekdays.indexOf(day)+1
+  const diff=(target-current.getDay()+7)%7
+  current.setDate(current.getDate()+diff)
+  return [current.getFullYear(),String(current.getMonth()+1).padStart(2,'0'),String(current.getDate()).padStart(2,'0')].join('-')
+}
+
+function localToday(){
+  const today=new Date()
+  return [today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-')
+}
+
+export function SessionSubstitutionRegister({
+  project,slotRequest,candidatesFor,
+}:{
+  project:ViyeuticaProject
+  slotRequest:SubstitutionSlotRequest|null
+  candidatesFor:(day:Weekday,sessionId:string)=>CandidateDetail[]
+}){
+  const [date,setDate]=useState(localToday)
+  const [initialSessionId,setInitialSessionId]=useState<string|null>(null)
   const [absentTeacherId,setAbsentTeacherId]=useState('')
   const [selectedEntryIds,setSelectedEntryIds]=useState<string[]>([])
   const [choices,setChoices]=useState<Record<string,string>>({})
   const [notes,setNotes]=useState('')
   const [error,setError]=useState('')
   const [editing,setEditing]=useState(false)
+  const [choosingEntryId,setChoosingEntryId]=useState<string|null>(null)
   const [pendingDelete,setPendingDelete]=useState<string|null>(null)
   const [historyFilter,setHistoryFilter]=useState('')
   const [historyDate,setHistoryDate]=useState('')
+  const [countFilter,setCountFilter]=useState('')
+  const [countSort,setCountSort]=useState<SortState<'name'|'completed'|'planned'>>({key:'completed',direction:'asc'})
+
+  useEffect(()=>{
+    if(!slotRequest)return
+    setDate(dateForWeekday(slotRequest.day))
+    setInitialSessionId(slotRequest.sessionId)
+    setAbsentTeacherId('')
+    setSelectedEntryIds([])
+    setChoices({})
+    setNotes('')
+    setError('')
+    setChoosingEntryId(null)
+    setEditing(true)
+  },[slotRequest?.requestId])
 
   const run=project.establishedScheduleRun
   const day=dateDay(date)
+  const activeDay=Boolean(day&&project.schedule.activeDays.includes(day))
   const blocks=project.schedule.blocks.filter(block=>block.active)
-  const lessonEntries=useMemo(()=>run&&day?run.entries
-    .filter(entry=>entry.day===day&&entry.teacherId===absentTeacherId)
-    .sort((a,b)=>blocks.findIndex(block=>block.id===a.sessionId)-blocks.findIndex(block=>block.id===b.sessionId)):[],
-    [run,day,absentTeacherId,blocks])
+  const dayEntries=useMemo(()=>run&&day&&activeDay
+    ?run.entries.filter(entry=>entry.day===day)
+    :[],[run,day,activeDay])
+  const teachersInSession=useMemo(()=>{
+    const entries=initialSessionId?dayEntries.filter(entry=>entry.sessionId===initialSessionId):dayEntries
+    return project.teachers.filter(t=>t.active&&entries.some(entry=>entry.teacherId===t.id))
+      .sort((a,b)=>a.name.localeCompare(b.name,'es'))
+  },[project.teachers,dayEntries,initialSessionId])
+  const lessonEntries=useMemo(()=>dayEntries.filter(entry=>entry.teacherId===absentTeacherId)
+    .sort((a,b)=>blocks.findIndex(b=>b.id===a.sessionId)-blocks.findIndex(b=>b.id===b.sessionId)),
+    [dayEntries,absentTeacherId,blocks])
   const records=project.substitutionRecords??[]
   const existingFor=(entry:GeneratedScheduleEntry)=>records.find(record=>
     record.date===date&&record.sessionId===entry.sessionId
     &&record.absentTeacherId===entry.teacherId&&record.groupId===entry.groupId&&record.assignmentId===entry.assignmentId)
   const selectable=lessonEntries.filter(entry=>!existingFor(entry))
   const selected=selectable.filter(entry=>selectedEntryIds.includes(entry.id))
-  const allReady=selected.length>0
-    &&selected.every(entry=>coverageOptions(project,date,entry).some(option=>option.id===choices[entry.id]))
+  const ready=selected.length>0&&Boolean(activeDay)
+    &&selected.every(entry=>coverageOptions(project,date,entry).some(opt=>opt.id===choices[entry.id]))
     &&new Set(selected.map(entry=>entry.sessionId+'|'+choices[entry.id])).size===selected.length
-    &&Boolean(day&&project.schedule.activeDays.includes(day))
+
+  const completed=records.filter(r=>r.status==='completed').length
+  const planned=records.filter(r=>r.status==='planned').length
+  const counts=project.teachers.filter(t=>t.active||records.some(r=>r.substituteTeacherId===t.id)).map(teacher=>({
+    id:teacher.id,name:teacher.name,
+    completed:records.filter(r=>r.substituteTeacherId===teacher.id&&r.status==='completed').length,
+    planned:records.filter(r=>r.substituteTeacherId===teacher.id&&r.status==='planned').length,
+  }))
+  const sortedCounts=sortCollection(counts.filter(t=>!countFilter||t.id===countFilter),countSort,(row,key)=>row[key])
   const history=records.filter(record=>
     (!historyFilter||record.substituteTeacherId===historyFilter||record.absentTeacherId===historyFilter)
     &&(!historyDate||record.date===historyDate))
     .sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt.localeCompare(a.createdAt))
-  const counts=project.teachers.filter(teacher=>teacher.active).map(teacher=>({
-    id:teacher.id,name:teacher.name,
-    completed:records.filter(r=>r.substituteTeacherId===teacher.id&&r.status==='completed').length,
-    planned:records.filter(r=>r.substituteTeacherId===teacher.id&&r.status==='planned').length,
-  })).sort((a,b)=>a.completed-b.completed||a.name.localeCompare(b.name,'es'))
+  const choosing=lessonEntries.find(e=>e.id===choosingEntryId)
+  const choosingOptions=choosing?coverageOptions(project,date,choosing):[]
+  const choiceMap=Object.fromEntries(choosingOptions.map(opt=>[opt.id.split(':')[1],opt.id]))
+  const pickerCandidates=choosing?candidatesFor(choosing.day,choosing.sessionId):[]
+  const selectedTeacherNames=project.teachers.filter(t=>t.active).sort((a,b)=>a.name.localeCompare(b.name,'es'))
 
+  const changeDate=(next:string)=>{
+    setDate(next);setAbsentTeacherId('');setSelectedEntryIds([]);setChoices({});setError('')
+  }
+  const changeAbsent=(teacherId:string)=>{
+    setAbsentTeacherId(teacherId)
+    const entries=dayEntries.filter(e=>e.teacherId===teacherId&&(!initialSessionId||e.sessionId===initialSessionId))
+    setSelectedEntryIds(entries.length?entries.map(e=>e.id):[])
+    setChoices({})
+    setError('')
+  }
+  const closeEditor=()=>{setEditing(false);setChoosingEntryId(null);setError('')}
   const save=()=>{
-    if(!run||!day||!allReady){setError('Selecciona una sesión y un responsable válido para cada cobertura.');return}
+    if(!run||!day||!ready){setError('Selecciona sesiones y responsables compatibles.');return}
     const additions:SubstitutionRecord[]=selected.map(entry=>{
-      const option=coverageOptions(project,date,entry).find(item=>item.id===choices[entry.id])!
+      const opt=coverageOptions(project,date,entry).find(o=>o.id===choices[entry.id])!
       return {id:id(),date,sessionId:entry.sessionId,absentTeacherId,groupId:entry.groupId,
-        assignmentId:entry.assignmentId,substituteTeacherId:option.id.slice(option.id.indexOf(':')+1),
-        coverageType:option.kind,status:'planned',notes:notes.trim(),createdAt:new Date().toISOString(),completedAt:null}
+        assignmentId:entry.assignmentId,substituteTeacherId:opt.id.split(':')[1],
+        coverageType:opt.kind,status:'planned',notes:notes.trim(),createdAt:new Date().toISOString(),completedAt:null}
     })
     saveProject({...project,substitutionRecords:[...records,...additions]},{intent:'replace_project'})
-    setEditing(false);setSelectedEntryIds([]);setChoices({});setNotes('');setError('')
+    closeEditor();setAbsentTeacherId('');setSelectedEntryIds([]);setChoices({});setNotes('')
   }
-  const markCompleted=(record:SubstitutionRecord)=>{
-    saveProject({...project,substitutionRecords:records.map(item=>item.id===record.id
-      ? {...item,status:'completed' as const,completedAt:new Date().toISOString()}:item)},{intent:'replace_project'})
-  }
+  const confirm=(record:SubstitutionRecord)=>saveProject({...project,substitutionRecords:records.map(item=>
+    item.id===record.id?{...item,status:'completed' as const,completedAt:new Date().toISOString()}:item
+  )},{intent:'replace_project'})
   const remove=(recordId:string)=>{
     saveProject({...project,substitutionRecords:records.filter(item=>item.id!==recordId)},{intent:'replace_project'})
     setPendingDelete(null)
   }
-  const changeDate=(value:string)=>{setDate(value);setSelectedEntryIds([]);setChoices({});setError('')}
-  const changeAbsent=(value:string)=>{setAbsentTeacherId(value);setSelectedEntryIds([]);setChoices({});setError('')}
 
-  return <section className="panel" aria-label="Registro de sustituciones por sesión">
-    <div className="groups-table-heading">
-      <div><span className="panel-kicker">Cobertura de ausencias</span><h2>Registro por fecha y sesión</h2>
-        <p>Planifica cada sustitución de una jornada completa o de sesiones concretas. El horario establecido no se modifica.</p></div>
-      <button className="btn primary" type="button" disabled={!run} onClick={()=>setEditing(true)}><Plus size={16}/> Registrar ausencia</button>
-    </div>
-    {!run&&<p>Para registrar sustituciones, primero establece un horario válido en Horarios.</p>}
-    <div className="structure-summary">
-      <article className="structure-summary-card"><span>Previstas</span><strong>{records.filter(r=>r.status==='planned').length}</strong><small>pendientes de confirmar</small></article>
-      <article className="structure-summary-card"><span>Realizadas</span><strong>{records.filter(r=>r.status==='completed').length}</strong><small>contabilizadas en el histórico</small></article>
-    </div>
-    {editing&&<AppModal title="Registrar ausencia y coberturas" icon={<CalendarDays size={19}/>} onClose={()=>setEditing(false)} wide footer={<>
-      <button type="button" className="btn ghost-inline" onClick={()=>setEditing(false)}>Cancelar</button>
-      <button type="button" className="btn primary" onClick={save} disabled={!allReady}>Guardar coberturas previstas</button>
+  return <>
+    <section className="panel substitution-register-section" aria-label="Reparto de sustituciones">
+      <div className="groups-table-heading">
+        <div><span className="panel-kicker">Reparto</span><h2>Sustituciones por docente</h2><p>Solo las coberturas confirmadas se suman al contador de realizadas.</p></div>
+        <div className="substitution-counter-summary"><span>{completed} realizadas</span><span>{planned} previstas</span></div>
+      </div>
+      <div className="list-filter-tags" aria-label="Filtrar reparto por docente">
+        <button type="button" className={!countFilter?'active':''} onClick={()=>setCountFilter('')}>Todos</button>
+        {selectedTeacherNames.map(t=><button type="button" className={countFilter===t.id?'active':''} key={t.id} onClick={()=>setCountFilter(t.id)}>{t.name}</button>)}
+      </div>
+      <div className="groups-table-wrap"><table className="groups-table">
+        <thead><tr>
+          <SortableTh label="Docente" sortKey="name" state={countSort} onSort={setCountSort}/>
+          <SortableTh label="Realizadas" sortKey="completed" state={countSort} onSort={setCountSort}/>
+          <SortableTh label="Previstas" sortKey="planned" state={countSort} onSort={setCountSort}/>
+        </tr></thead>
+        <tbody>{sortedCounts.map(row=><tr key={row.id}><td><strong>{row.name}</strong></td><td>{row.completed}</td><td>{row.planned}</td></tr>)}</tbody>
+      </table></div>
+    </section>
+    <section className="panel substitution-register-section" aria-label="Historial de coberturas">
+      <div className="groups-table-heading"><div><span className="panel-kicker">Trazabilidad</span><h2>Historial de coberturas</h2><p>Fecha, sesión, ausente, responsable y confirmación de cada sustitución.</p></div></div>
+      <div className="list-filter-tags" aria-label="Filtrar historial por docente">
+        <button type="button" className={!historyFilter?'active':''} onClick={()=>setHistoryFilter('')}>Todos</button>
+        {selectedTeacherNames.map(t=><button type="button" className={historyFilter===t.id?'active':''} key={t.id} onClick={()=>setHistoryFilter(t.id)}>{t.name}</button>)}
+      </div>
+      <div className="substitution-history-date"><label className="form-field"><span>Fecha</span><input type="date" value={historyDate} onChange={e=>setHistoryDate(e.target.value)}/></label>
+        {historyDate&&<button type="button" className="btn ghost-inline" onClick={()=>setHistoryDate('')}>Todas las fechas</button>}</div>
+      <div className="groups-table-wrap"><table className="groups-table"><thead><tr>
+        <th>Fecha</th><th>Sesión</th><th>Ausente</th><th>Responsable</th><th>Grupo</th><th>Estado</th><th>Acciones</th>
+      </tr></thead><tbody>{history.map(record=><tr key={record.id}>
+        <td>{record.date}</td>
+        <td>{project.schedule.blocks.find(b=>b.id===record.sessionId)?.label??record.sessionId}</td>
+        <td>{byName(project,record.absentTeacherId)}</td>
+        <td>{byName(project,record.substituteTeacherId)}{record.coverageType==='co_teacher'?' · Codocente':''}</td>
+        <td>{byGroup(project,record.groupId)}</td>
+        <td>{record.status==='completed'?'Realizada':'Prevista'}</td>
+        <td><div className="substitution-history-actions">
+          {record.status==='planned'&&<button type="button" className="btn ghost-inline" onClick={()=>confirm(record)} title="Confirmar realización"><CheckCircle2 size={15}/> Confirmar</button>}
+          <button type="button" className="row-delete" onClick={()=>setPendingDelete(record.id)} title="Eliminar registro"><Trash2 size={15}/></button>
+        </div></td>
+      </tr>)}</tbody></table>
+        {!history.length&&<p className="substitutions-empty">No hay sustituciones registradas con estos filtros.</p>}
+      </div>
+    </section>
+
+    {editing&&<AppModal title="Registrar ausencia y coberturas" icon={<CalendarDays size={19}/>} onClose={closeEditor} wide footer={<>
+      <button type="button" className="btn ghost-inline" onClick={closeEditor}>Cancelar</button>
+      <button type="button" className="btn primary" disabled={!ready} onClick={save}>Guardar coberturas previstas</button>
     </>}>
       <div className="form-grid two">
         <label className="form-field"><span>Fecha de la ausencia</span><input type="date" value={date} onChange={e=>changeDate(e.target.value)}/></label>
-        <label className="form-field"><span>Docente ausente</span><select value={absentTeacherId} onChange={e=>changeAbsent(e.target.value)}>
-          <option value="">Selecciona...</option>{project.teachers.filter(t=>t.active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
+        <label className="form-field"><span>Docente ausente</span><select value={absentTeacherId} onChange={e=>changeAbsent(e.target.value)} disabled={!activeDay}>
+          <option value="">Selecciona docente...</option>{teachersInSession.map(t=><option value={t.id} key={t.id}>{t.name}</option>)}
         </select></label>
       </div>
-      {!day&&<p className="inline-error">Selecciona una fecha lectiva de lunes a sábado.</p>}
-      {day&&!project.schedule.activeDays.includes(day)&&<p className="inline-error">El {dayName[day].toLowerCase()} no forma parte de la jornada configurada.</p>}
-      {absentTeacherId&&day&&<div className="groups-table-wrap">
-        <p><strong>{dayName[day]}:</strong> marca todas las clases del día o únicamente las sesiones afectadas. Cada sesión permite escoger un sustituto distinto.</p>
-        <table className="groups-table"><thead><tr><th scope="col">Cubrir</th><th scope="col">Franja y grupo</th><th scope="col">Codocencia / sustituto</th></tr></thead><tbody>
-          {lessonEntries.map(entry=>{
-            const block=blocks.find(item=>item.id===entry.sessionId)
-            const already=existingFor(entry)
-            const options=coverageOptions(project,date,entry)
-            const checked=selectedEntryIds.includes(entry.id)
-            return <tr key={entry.id}>
-              <td><input type="checkbox" checked={checked} disabled={Boolean(already)} onChange={e=>setSelectedEntryIds(current=>e.target.checked?[...current,entry.id]:current.filter(item=>item!==entry.id))}/></td>
-              <td><strong>{block?.label??entry.sessionId}</strong> · {block?.start}–{block?.end}<small style={{display:'block'}}>{byGroup(project,entry.groupId)} · {project.subjects.find(s=>s.id===entry.subjectId)?.name??'Materia'}</small></td>
-              <td>{already?<span>Ya registrada: {byName(project,already.substituteTeacherId)}</span>
-                :<select aria-label={'Responsable de '+(block?.label??entry.sessionId)+' para '+byGroup(project,entry.groupId)} disabled={!checked} value={choices[entry.id]??''} onChange={e=>setChoices(current=>({...current,[entry.id]:e.target.value}))}>
-                  <option value="">Selecciona responsable...</option>
-                  {options.map(opt=><option key={opt.id} value={opt.id}>{opt.label}</option>)}
-                </select>}
-                {!options.length&&!already&&<small style={{display:'block'}}>Sin docentes compatibles; revisa el horario o las disponibilidades.</small>}
-              </td>
-            </tr>
-          })}
-        </tbody></table>
-        {!lessonEntries.length&&<p>Este docente no tiene clases asignadas en la fecha elegida. No se generan coberturas ficticias.</p>}
+      {!activeDay&&<p className="inline-error">La fecha seleccionada no es un día lectivo configurado.</p>}
+      {activeDay&&initialSessionId&&<p className="substitutions-help">Se muestran los docentes con clase en la sesión seleccionada. Puedes elegir más sesiones del mismo docente para cubrir la jornada completa.</p>}
+      {absentTeacherId&&activeDay&&<div className="groups-table-wrap">
+        <p className="substitution-form-description"><strong>{day&&dayName[day]}:</strong> marca una o varias sesiones. Pulsa el icono de docentes para elegir el responsable de cada cobertura.</p>
+        <table className="groups-table substitution-form-table"><thead><tr>
+          <th scope="col">Cubrir</th><th scope="col">Franja y grupo</th><th scope="col">Codocencia / sustituto</th>
+        </tr></thead><tbody>{lessonEntries.map(entry=>{
+          const block=blocks.find(b=>b.id===entry.sessionId)
+          const already=existingFor(entry)
+          const checked=selectedEntryIds.includes(entry.id)
+          const choice=coverageOptions(project,date,entry).find(o=>o.id===choices[entry.id])
+          return <tr key={entry.id}>
+            <td><input type="checkbox" aria-label={'Cubrir '+(block?.label??entry.sessionId)+' de '+byName(project,absentTeacherId)} checked={checked} disabled={Boolean(already)} onChange={e=>{
+              setSelectedEntryIds(ids=>e.target.checked?[...ids,entry.id]:ids.filter(id=>id!==entry.id))
+              if(!e.target.checked)setChoices(old=>{const next={...old};delete next[entry.id];return next})
+            }}/></td>
+            <td><strong>{block?.label??entry.sessionId}</strong> · {block?.start}–{block?.end}
+              <small style={{display:'block'}}>{byGroup(project,entry.groupId)} · {project.subjects.find(s=>s.id===entry.subjectId)?.name??'Materia'}</small></td>
+            <td>{already?<span className="substitution-chosen-label">Ya registrada: {byName(project,already.substituteTeacherId)}</span>:
+              <div className="substitution-picker-field">
+                <button type="button" className="substitution-pick-button" title="Elegir docente de cobertura" aria-label={'Elegir sustituto de '+(block?.label??entry.sessionId)} disabled={!checked}
+                  onClick={()=>setChoosingEntryId(entry.id)}><UserRoundPlus size={19}/></button>
+                <span className={choice?'substitution-chosen-label':'substitution-unselected'}>{choice?choice.label:'Sin elegir'}</span>
+              </div>}
+            </td>
+          </tr>
+        })}</tbody></table>
+        {!lessonEntries.length&&<p className="substitutions-empty">Este docente no tiene clases en el día seleccionado.</p>}
       </div>}
       <label className="form-field"><span>Observaciones de la ausencia</span><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Opcional"/></label>
       {error&&<p className="inline-error">{error}</p>}
     </AppModal>}
-    <div className="groups-table-heading"><div><span className="panel-kicker">Trazabilidad</span><h2>Historial de coberturas</h2><p>Solo las confirmadas como realizadas se acumulan en el contador.</p></div></div>
-    <div className="form-grid two">
-      <label className="form-field"><span>Filtrar por docente</span><select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)}><option value="">Todos</option>{project.teachers.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-      <label className="form-field"><span>Filtrar por fecha</span><input type="date" value={historyDate} onChange={e=>setHistoryDate(e.target.value)}/></label>
-    </div>
-    <div className="groups-table-wrap">
-      <table className="groups-table"><thead><tr><th>Fecha</th><th>Sesión</th><th>Ausente</th><th>Responsable</th><th>Grupo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
-        {history.map(record=><tr key={record.id}>
-          <td>{record.date}</td><td>{project.schedule.blocks.find(b=>b.id===record.sessionId)?.label??record.sessionId}</td>
-          <td>{byName(project,record.absentTeacherId)}</td>
-          <td>{byName(project,record.substituteTeacherId)}{record.coverageType==='co_teacher'?' · Codocente':''}</td>
-          <td>{byGroup(project,record.groupId)}</td><td>{record.status==='completed'?'Realizada':'Prevista'}</td>
-          <td>{record.status==='planned'&&<button type="button" className="btn ghost-inline" onClick={()=>markCompleted(record)} title="Confirmar que se realizó"><CheckCircle2 size={15}/> Confirmar</button>}
-            <button type="button" className="row-delete" title="Eliminar registro" onClick={()=>setPendingDelete(record.id)}><Trash2 size={15}/></button></td>
-        </tr>)}
-      </tbody></table>
-      {!history.length&&<p>No hay coberturas que coincidan con los filtros.</p>}
-    </div>
-    <div className="groups-table-heading"><div><span className="panel-kicker">Reparto</span><h2>Sustituciones por docente</h2></div></div>
-    <div className="groups-table-wrap"><table className="groups-table"><thead><tr><th>Docente</th><th>Realizadas</th><th>Previstas</th></tr></thead><tbody>
-      {counts.map(item=><tr key={item.id}><td>{item.name}</td><td>{item.completed}</td><td>{item.planned}</td></tr>)}
-    </tbody></table></div>
-    {pendingDelete&&<AppModal title="Eliminar registro de sustitución" icon={<ClipboardList size={19}/>} onClose={()=>setPendingDelete(null)} footer={<>
-      <button type="button" className="btn ghost-inline" onClick={()=>setPendingDelete(null)}>Cancelar</button>
-      <button type="button" className="btn primary" onClick={()=>remove(pendingDelete)}>Eliminar registro</button>
-    </>}><p>Se eliminará esta cobertura del historial y del contador correspondiente. El horario oficial no cambia.</p></AppModal>}
-  </section>
+    {editing&&choosing&&<SubstitutionTeacherDialog
+      title={(day?dayName[day]:'Sesión')+' · '+(blocks.find(b=>b.id===choosing.sessionId)?.label??choosing.sessionId)}
+      time={(blocks.find(b=>b.id===choosing.sessionId)?.start??'')+'–'+(blocks.find(b=>b.id===choosing.sessionId)?.end??'')}
+      candidates={pickerCandidates}
+      choices={choiceMap}
+      selectedId={choices[choosing.id]}
+      onClose={()=>setChoosingEntryId(null)}
+      onSelect={value=>{setChoices(old=>({...old,[choosing.id]:value}));setChoosingEntryId(null)}}
+    />}
+    {pendingDelete&&<AppModal title="Eliminar registro de sustitución" icon={<ClipboardList size={19}/>} onClose={()=>setPendingDelete(null)}
+      footer={<><button type="button" className="btn ghost-inline" onClick={()=>setPendingDelete(null)}>Cancelar</button>
+      <button type="button" className="btn primary" onClick={()=>remove(pendingDelete)}>Eliminar registro</button></>}>
+      <p>Se eliminará este registro del historial y del contador correspondiente. No modifica el horario oficial.</p>
+    </AppModal>}
+  </>
 }
