@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { CalendarSearch, Clock3, Users } from 'lucide-react'
-import { AppModal } from '../components/AppModal'
-import { SessionSubstitutionRegister } from './SessionSubstitutionRegister'
+import { CalendarSearch, UserRoundPlus, Users } from 'lucide-react'
+import { SubstitutionTeacherDialog } from './SubstitutionTeacherDialog'
+import { SessionSubstitutionRegister, type SubstitutionSlotRequest } from './SessionSubstitutionRegister'
 import {
   latestGeneration,
   type GenerationRun,
@@ -98,6 +98,7 @@ export function SubstitutionsPage({ project, navigate }: {
   const [sourceKey, setSourceKey] = useState('')
   const [filter, setFilter] = useState<ViewFilter>('available')
   const [detailSlot, setDetailSlot] = useState<{ day: Weekday; sessionId: string } | null>(null)
+  const [registrationSlot, setRegistrationSlot] = useState<SubstitutionSlotRequest | null>(null)
 
   const selected = runs.find(item => item.key === sourceKey) ??
     runs.find(item => item.run.id === preferredId) ?? runs[0]
@@ -120,23 +121,24 @@ export function SubstitutionsPage({ project, navigate }: {
     : false
   const detailSession = sessions.find(session => session.id === detailSlot?.sessionId)
   const detailCandidates = detailSlot ? cells.get(detailSlot.day + '|' + detailSlot.sessionId) ?? [] : []
-  const detailGroups = [
-    { title: 'Sin clase', entries: detailCandidates.filter(candidate => candidate.status === 'free') },
-    { title: 'Evitar (SOFT)', entries: detailCandidates.filter(candidate => candidate.status === 'avoid') },
-    { title: 'No disponibles / itinerancia', entries: detailCandidates.filter(candidate => candidate.status === 'blocked') },
-    { title: 'Con sesión asignada', entries: detailCandidates.filter(candidate => candidate.status === 'busy') },
-  ]
+  const requestCoverage = (day:Weekday,sessionId:string)=>{
+    setRegistrationSlot(previous=>({day,sessionId,requestId:(previous?.requestId??0)+1}))
+  }
+  const coverageCandidates=(day:Weekday,sessionId:string)=>
+    project.establishedScheduleRun
+      ?candidatesForSlot(project,project.establishedScheduleRun,day,sessionId)
+      :[]
+
 
   return <div className="wizard-page substitutions-page">
     <section className="wizard-intro">
       <div>
-        <span className="eyebrow dark"><CalendarSearch size={15}/> Consulta de horarios</span>
+        <span className="eyebrow dark"><CalendarSearch size={15}/> Cobertura docente</span>
         <h1>Sustituciones</h1>
-        <p>Consulta por día y sesión el profesorado sin clase, con restricciones o con otras asignaciones, sin modificar el horario.</p>
+        <p>Consulta las disponibilidades, registra coberturas por sesión y revisa el reparto e historial de sustituciones.</p>
       </div>
     </section>
 
-    <SessionSubstitutionRegister project={project}/>
     <section className="panel">
       <div className="substitutions-toolbar">
         <label className="form-field substitutions-reference"><span>Horario de referencia</span>
@@ -157,7 +159,7 @@ export function SubstitutionsPage({ project, navigate }: {
         ? <p className="substitutions-note">Para consultar la disponibilidad, configura sesiones lectivas y genera o establece un horario desde Horarios. <button type="button" onClick={() => navigate('/horarios')}>Ir a Horarios</button></p>
         : <>
           {needsReview && <p className="substitutions-warning">Este horario necesita revalidación. Los datos de disponibilidad pueden estar desactualizados.</p>}
-          <p className="substitutions-grid-hint">Selecciona una celda para consultar el detalle de todos los docentes de esa sesión.</p>
+          <p className="substitutions-grid-hint">Utiliza los dos iconos de cada sesión: registrar una ausencia o consultar el detalle de disponibilidad.</p>
           <div className="substitutions-grid-scroll" role="region" aria-label="Horario semanal de sustituciones" tabIndex={0}>
             <table className="substitutions-week-grid">
               <thead><tr><th scope="col">Sesión</th>{activeDays.map(day => <th scope="col" key={day}>{DAY_LABELS[day]}</th>)}</tr></thead>
@@ -169,10 +171,19 @@ export function SubstitutionsPage({ project, navigate }: {
                     const summary = candidates.slice(0, 3)
                     const remaining = candidates.length - summary.length
                     return <td key={day}>
-                      <button type="button" className={'substitutions-slot ' + (candidates.length ? '' : 'is-empty')}
-                        onClick={() => setDetailSlot({ day, sessionId: session.id })}
-                        aria-label={DAY_LABELS[day] + ', ' + (session.label || (index + 1) + '.ª sesión') + ': ' + candidates.length + ' docentes en ' + FILTER_LABELS[filter] + '. Ver detalle'}>
-                        <span className="substitutions-slot-header"><strong>{candidates.length} {candidates.length === 1 ? 'docente' : 'docentes'}</strong><span>Ver detalle</span></span>
+                      <div className={'substitutions-slot ' + (candidates.length ? '' : 'is-empty')}>
+                        <div className="substitutions-slot-header">
+                          <strong>{candidates.length} {candidates.length === 1 ? 'docente' : 'docentes'}</strong>
+                          <span className="substitutions-cell-actions">
+                            <button type="button" className="substitution-cell-action" title="Registrar ausencia y cobertura"
+                              aria-label={'Registrar sustitución: '+DAY_LABELS[day]+', '+(session.label||String(index+1))}
+                              disabled={!project.establishedScheduleRun||selected?.key!=='established'}
+                              onClick={()=>requestCoverage(day,session.id)}><UserRoundPlus size={17}/></button>
+                            <button type="button" className="substitution-cell-action" title="Ver disponibilidad docente"
+                              aria-label={'Ver detalle docente: '+DAY_LABELS[day]+', '+(session.label||String(index+1))}
+                              onClick={()=>setDetailSlot({day,sessionId:session.id})}><Users size={17}/></button>
+                          </span>
+                        </div>
                         {summary.length
                           ? <span className="substitutions-slot-names">{summary.map(candidate =>
                             <span key={candidate.id} className={'substitutions-slot-name ' + candidate.status}>
@@ -181,7 +192,7 @@ export function SubstitutionsPage({ project, navigate }: {
                             </span>)}</span>
                           : <span className="substitutions-slot-empty">Ninguno</span>}
                         {remaining > 0 && <span className="substitutions-slot-more">+{remaining} más</span>}
-                      </button>
+                      </div>
                     </td>
                   })}
                 </tr>)}
@@ -191,25 +202,12 @@ export function SubstitutionsPage({ project, navigate }: {
           <p className="substitutions-help">«Disponibles» incluye docentes sin sesión asignada y sin bloqueo HARD; las preferencias SOFT aparecen identificadas. «Sin clase» también incluye docentes no disponibles. Comprueba apoyos, cargos, reducciones y otras obligaciones antes de asignar una sustitución.</p>
         </>}
     </section>
-    {detailSlot && detailSession && <AppModal
-      title={DAY_LABELS[detailSlot.day] + ' · ' + detailSession.label}
-      icon={<Users size={19}/>}
-      onClose={() => setDetailSlot(null)}
-      wide
-    >
-      <p className="substitutions-modal-time"><Clock3 size={15}/> {detailSession.start}–{detailSession.end} · {detailCandidates.length} {detailCandidates.length === 1 ? 'docente' : 'docentes'} en plantilla activa</p>
-      {detailGroups.map(group => <section className="substitutions-detail-group" key={group.title}>
-        <h3>{group.title} <span>{group.entries.length}</span></h3>
-        {group.entries.length
-          ? <div className="substitutions-results">{group.entries.map(candidate =>
-              <div className="substitutions-teacher" key={candidate.id}>
-                <Users size={17}/><div><strong>{candidate.name || 'Docente sin nombre'}</strong><small>{candidate.detail}</small></div>
-                <span className={'substitutions-state ' + candidate.status}>{candidateStatus(candidate.status)}</span>
-              </div>
-            )}</div>
-          : <p className="substitutions-empty">No hay docentes en esta categoría.</p>}
-      </section>)}
-      <p className="substitutions-help">Esta es una consulta del horario de referencia, no una asignación ni autorización de sustitución.</p>
-    </AppModal>}
+    <SessionSubstitutionRegister project={project} slotRequest={registrationSlot} candidatesFor={coverageCandidates}/>
+    {detailSlot && detailSession && <SubstitutionTeacherDialog
+      title={DAY_LABELS[detailSlot.day]+' · '+detailSession.label}
+      time={detailSession.start+'–'+detailSession.end}
+      candidates={detailCandidates}
+      onClose={()=>setDetailSlot(null)}
+    />}
   </div>
 }
