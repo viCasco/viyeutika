@@ -167,7 +167,7 @@ export function SubstitutionsPage({ project, navigate }: {
               <thead><tr><th scope="col">Sesión</th>{activeDays.map(day => {
                 const date=dateForWeekday(day)
                 const total=substitutionsForDay(project,date).length
-                return <th scope="col" key={day}>
+                return <th scope="col" key={day} className={total>0?'has-substitutions':undefined}>
                   <div className="substitutions-day-heading">
                     <span>{DAY_LABELS[day]}</span>
                     {total>0&&<button type="button" className="substitutions-day-view" title={'Ver '+total+' coberturas del '+date}

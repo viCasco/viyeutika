@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CheckCircle2, ClipboardList, UserRoundPlus, Trash2 } from 'lucide-react'
+import { CalendarDays, CheckCircle2, ChevronDown, ClipboardList, UserRoundPlus, Trash2 } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
 import { saveProject } from '../store/projectStorage'
 import type { GeneratedScheduleEntry, SubstitutionRecord, ViyeuticaProject, Weekday } from '../domain/project'
@@ -191,11 +191,11 @@ export function SessionSubstitutionRegister({
   }
 
   return <>
-    <section className="panel substitution-register-section" aria-label="Reparto de sustituciones">
-      <div className="groups-table-heading">
+    <details className="panel substitution-register-section" open>
+      <summary className="groups-table-heading substitution-section-summary">
         <div><span className="panel-kicker">Reparto</span><h2>Sustituciones por docente</h2><p>Solo las coberturas confirmadas se suman al contador de realizadas.</p></div>
-        <div className="substitution-counter-summary"><span>{completed} realizadas</span><span>{planned} previstas</span></div>
-      </div>
+        <div className="substitution-summary-actions"><div className="substitution-counter-summary"><span>{completed} realizadas</span><span>{planned} previstas</span></div><ChevronDown size={18} className="substitution-section-chevron" aria-hidden="true"/></div>
+      </summary>
       <div className="list-filter-tags" aria-label="Filtrar reparto por docente">
         <button type="button" className={!countFilter?'active':''} onClick={()=>setCountFilter('')}>Todos</button>
         {selectedTeacherNames.map(t=><button type="button" className={countFilter===t.id?'active':''} key={t.id} onClick={()=>setCountFilter(t.id)}>{t.name}</button>)}
@@ -208,9 +208,12 @@ export function SessionSubstitutionRegister({
         </tr></thead>
         <tbody>{sortedCounts.map(row=><tr key={row.id}><td><strong>{row.name}</strong></td><td>{row.completed}</td><td>{row.planned}</td></tr>)}</tbody>
       </table></div>
-    </section>
-    <section className="panel substitution-register-section" aria-label="Historial de coberturas">
-      <div className="groups-table-heading"><div><span className="panel-kicker">Trazabilidad</span><h2>Historial de coberturas</h2><p>Fecha, sesión, ausente, responsable y confirmación de cada sustitución.</p></div></div>
+    </details>
+    <details className="panel substitution-register-section" open>
+      <summary className="groups-table-heading substitution-section-summary">
+        <div><span className="panel-kicker">Trazabilidad</span><h2>Historial de coberturas</h2><p>Fecha, sesión, ausente, responsable y confirmación de cada sustitución.</p></div>
+        <ChevronDown size={18} className="substitution-section-chevron" aria-hidden="true"/>
+      </summary>
       <div className="list-filter-tags" aria-label="Filtrar historial por docente">
         <button type="button" className={!historyFilter?'active':''} onClick={()=>setHistoryFilter('')}>Todos</button>
         {selectedTeacherNames.map(t=><button type="button" className={historyFilter===t.id?'active':''} key={t.id} onClick={()=>setHistoryFilter(t.id)}>{t.name}</button>)}
@@ -233,7 +236,7 @@ export function SessionSubstitutionRegister({
       </tr>)}</tbody></table>
         {!history.length&&<p className="substitutions-empty">No hay sustituciones registradas con estos filtros.</p>}
       </div>
-    </section>
+    </details>
 
     {editing&&<AppModal title="Registrar ausencia y coberturas" icon={<CalendarDays size={19}/>} onClose={closeEditor} wide footer={<>
       <button type="button" className="btn ghost-inline" onClick={closeEditor}>Cancelar</button>

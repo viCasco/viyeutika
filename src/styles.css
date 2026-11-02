@@ -3374,3 +3374,23 @@ button.btn:disabled:hover{
 .daily-substitutions-no-cover{padding:12px;font-size:11px;color:var(--muted);margin:0}
 .daily-substitutions-footer{font-size:10px;color:var(--muted);margin:12px 0 4px}
 @media(max-width:650px){.daily-substitutions-grid{grid-template-columns:1fr}.daily-substitutions-names{grid-template-columns:1fr}}
+
+/* Days with coverage: keep the weekday centered, eye pinned to the right */
+.substitutions-week-grid thead th.has-substitutions{background-color:#65abe9}
+.substitutions-day-heading{position:relative;display:flex;align-items:center;justify-content:center;min-height:32px;width:100%;padding:0 26px}
+.substitutions-day-heading>span{text-align:center}
+.substitutions-day-view{position:absolute;right:0;top:50%;transform:translateY(-50%);border:none;background:transparent;border-radius:6px;color:var(--navy2);padding:4px;cursor:pointer}
+.substitutions-day-view:hover,.substitutions-day-view:focus-visible{background:rgba(255,255,255,.25);outline-offset:2px}
+[data-theme="dark"] .substitutions-week-grid thead th.has-substitutions{background-color:#65abe9;color:#173b5d}
+/* Collapsible register sections, retaining the tables' existing sort and filters */
+.substitution-section-summary{list-style:none;cursor:pointer;align-items:center;padding:14px 16px;user-select:none}
+.substitution-section-summary::-webkit-details-marker{display:none}
+.substitution-section-summary::marker{content:''}
+.substitution-summary-actions{display:flex;align-items:center;gap:12px}
+.substitution-section-chevron{flex-shrink:0;color:var(--muted);transition:transform .18s ease;transform:rotate(-90deg)}
+.substitution-register-section[open] .substitution-section-chevron{transform:rotate(0deg)}
+.substitution-section-summary:hover{background:color-mix(in srgb,var(--navy2) 3%,var(--surface))}
+.substitution-section-summary:focus-visible{outline:2px solid var(--green2);outline-offset:-3px}
+.daily-substitutions-footer-actions{display:flex;gap:9px;align-items:center;justify-content:flex-end;flex-wrap:wrap;width:100%}
+.daily-substitutions-copy-feedback{flex:1;min-width:200px;color:var(--muted);font-size:11px}
+@media(max-width:650px){.substitution-summary-actions{flex-wrap:wrap;justify-content:flex-end}.daily-substitutions-copy-feedback{flex-basis:100%}}
