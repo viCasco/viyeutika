@@ -42,7 +42,7 @@ export function coverageOptions(project:ViyeuticaProject,date:string,entry:Gener
   const codocents=run.entries.filter(other=>
     other.id!==entry.id&&other.day===entry.day&&other.sessionId===entry.sessionId
     &&other.groupId===entry.groupId&&other.teacherId!==entry.teacherId
-    &&project.assignments.some(a=>a.id===other.assignmentId&&a.assignmentType==='co_teaching')
+    &&project.assignments.some(a=>a.id===other.assignmentId&&(a.assignmentType==='co_teaching'||a.assignmentType==='main'))
   )
   const retained=codocents
     .filter(item=>project.teachers.some(t=>t.id===item.teacherId&&t.active)
@@ -86,8 +86,10 @@ export function SessionSubstitutionRegister({project}:{project:ViyeuticaProject}
     &&record.absentTeacherId===entry.teacherId&&record.groupId===entry.groupId&&record.assignmentId===entry.assignmentId)
   const selectable=lessonEntries.filter(entry=>!existingFor(entry))
   const selected=selectable.filter(entry=>selectedEntryIds.includes(entry.id))
-  const allReady=selected.length>0&&selected.every(entry=>coverageOptions(project,date,entry)
-    .some(option=>option.id===choices[entry.id]))
+  const allReady=selected.length>0
+    &&selected.every(entry=>coverageOptions(project,date,entry).some(option=>option.id===choices[entry.id]))
+    &&new Set(selected.map(entry=>entry.sessionId+'|'+choices[entry.id])).size===selected.length
+    &&Boolean(day&&project.schedule.activeDays.includes(day))
   const history=records.filter(record=>
     (!historyFilter||record.substituteTeacherId===historyFilter||record.absentTeacherId===historyFilter)
     &&(!historyDate||record.date===historyDate))
