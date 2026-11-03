@@ -39,8 +39,6 @@ export function isSubstituteEligible(
   if(run.entries.some(other=>other.teacherId===teacherId&&other.day===day&&other.sessionId===entry.sessionId))return false
   if((project.substitutionRecords??[]).some(record=>record.id!==excludeRecordId&&record.date===date&&record.sessionId===entry.sessionId
     &&record.substituteTeacherId===teacherId&&coverageState(project,record)!=='needs_reassignment'))return false
-  if(project.temporaryChanges.some(change=>change.active&&change.kind==='absence'
-    &&change.teacherId===teacherId&&date>=change.startDate&&date<=change.endDate))return false
   return true
 }
 
@@ -55,7 +53,11 @@ export function coverageOptions(project:ViyeuticaProject,date:string,entry:Gener
   const retained=codocents
     .filter(item=>project.teachers.some(t=>t.id===item.teacherId&&t.active)
       &&!teacherIsUnavailable(project,item.teacherId,{day:entry.day,sessionId:entry.sessionId})
-      &&!isTeacherAbsent(project,item.teacherId,date,entry.sessionId))
+      &&!isTeacherAbsent(project,item.teacherId,date,entry.sessionId)
+      &&!(project.substitutionRecords??[]).some(record=>record.id!==excludeRecordId
+        &&record.date===date&&record.sessionId===entry.sessionId
+        &&record.substituteTeacherId===item.teacherId
+        &&coverageState(project,record)!=='needs_reassignment'))
     .map(item=>({id:'co:'+item.teacherId,label:'Codocente existente: '+(project.teachers.find(t=>t.id===item.teacherId)?.name??item.teacherId),kind:'co_teacher' as const}))
   const substitutes=project.teachers.filter(t=>isSubstituteEligible(project,date,entry,t.id,excludeRecordId))
     .map(t=>({id:'sub:'+t.id,label:t.name,kind:'substitute' as const}))
@@ -238,7 +240,7 @@ export function SessionSubstitutionRegister({
         assignmentId:entry.assignmentId,substituteTeacherId:opt.id.split(':')[1],
         coverageType:opt.kind,status:'planned',notes:notes.trim(),createdAt:new Date().toISOString(),completedAt:null}
     })
-    const absentSessionIds=[...new Set(additions.map(record=>record.sessionId))]
+    const absentSessionIds=[...new Set([...absenceSessionIds,...additions.map(record=>record.sessionId)])]
     const next=registerTeacherAbsence(project,{id:'absence_'+crypto.randomUUID(),date,teacherId:absentTeacherId,
       sessionIds:absentSessionIds,notes:notes.trim(),createdAt:new Date().toISOString()})
     saveProject({...next,substitutionRecords:[...next.substitutionRecords,...additions]},{intent:'replace_project'})
