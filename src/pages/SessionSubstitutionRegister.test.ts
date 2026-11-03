@@ -61,3 +61,20 @@ describe('fecha sugerida desde la cuadrícula',()=>{
     expect(dateForWeekday('L',new Date(2026,10,29))).toBe('2026-11-30')
   })
 })
+
+describe('ausencias parciales y disponibilidad de sustitutos',()=>{
+  it('permite otras sesiones al docente con ausencia temporal limitada',()=>{
+    const p=fixture()
+    p.establishedScheduleRun!.entries.push({...entry,id:'second-slot',teacherId:'t2',sessionId:'h2'})
+    p.temporaryChanges.push({id:'absence-temp',kind:'absence',startDate:'2026-11-02',
+      endDate:'2026-11-02',teacherId:'t2',entryIds:['second-slot'],
+      notes:'Solo segunda sesión',active:true,createdAt:''})
+    expect(isSubstituteEligible(p,'2026-11-02',entry,'t2')).toBe(true)
+  })
+  it('excluye al docente cuando su ausencia registrada afecta esa sesión',()=>{
+    const p=fixture()
+    p.substitutionAbsences.push({id:'absence',date:'2026-11-02',teacherId:'t2',
+      sessionIds:['h1'],notes:'',createdAt:''})
+    expect(isSubstituteEligible(p,'2026-11-02',entry,'t2')).toBe(false)
+  })
+})
