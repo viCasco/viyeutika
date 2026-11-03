@@ -388,6 +388,27 @@ export function SessionSubstitutionRegister({
       onClose={()=>setChoosingEntryId(null)}
       onSelect={value=>{setChoices(old=>({...old,[choosing.id]:value}));setChoosingEntryId(null)}}
     />}
+    {reassigning&&<AppModal title="Reasignar cobertura pendiente" icon={<AlertTriangle size={19}/>} onClose={()=>setReassignmentId(null)}
+      footer={<><button type="button" className="btn ghost-inline" onClick={()=>setReassignmentId(null)}>Cancelar</button>
+        <button type="button" className="btn primary" disabled={!replacementOptions.some(o=>o.id===replacementChoice)} onClick={saveReassignment}>Guardar reasignación</button></>}>
+      <p><strong>{reassigning.date}</strong> · {blocks.find(b=>b.id===reassigning.sessionId)?.label??reassigning.sessionId}
+        · {byGroup(project,reassigning.groupId)}</p>
+      <p>Docente ausente: <strong>{byName(project,reassigning.absentTeacherId)}</strong>. Responsable anterior:
+        <strong> {byName(project,reassigning.substituteTeacherId)}</strong>.</p>
+      <div className="substitution-picker-field"><button type="button" className="btn ghost-inline" onClick={()=>setReplacementPicker(true)}>
+        <UserRoundPlus size={17}/> Elegir nuevo responsable</button>
+        <strong>{replacementOptions.find(o=>o.id===replacementChoice)?.label??'Sin seleccionar'}</strong></div>
+      <label className="form-field"><span>Motivo de reasignación</span><input value={reassignmentReason} onChange={e=>setReassignmentReason(e.target.value)}/></label>
+      {!replacementOptions.length&&<p className="inline-error">No existen docentes compatibles. La cobertura permanece pendiente hasta resolver la disponibilidad.</p>}
+      {error&&<p className="inline-error" role="alert">{error}</p>}
+    </AppModal>}
+    {reassigning&&replacementPicker&&<SubstitutionTeacherDialog
+      title={'Reasignar · '+(blocks.find(b=>b.id===reassigning.sessionId)?.label??reassigning.sessionId)}
+      time={(blocks.find(b=>b.id===reassigning.sessionId)?.start??'')+'–'+(blocks.find(b=>b.id===reassigning.sessionId)?.end??'')}
+      candidates={replacementCandidates} choices={replacementMap} selectedId={replacementChoice}
+      onClose={()=>setReplacementPicker(false)}
+      onSelect={choice=>{setReplacementChoice(choice);setReplacementPicker(false)}}
+    />}
     {pendingDelete&&<AppModal title="Eliminar registro de sustitución" icon={<ClipboardList size={19}/>} onClose={()=>setPendingDelete(null)}
       footer={<><button type="button" className="btn ghost-inline" onClick={()=>setPendingDelete(null)}>Cancelar</button>
       <button type="button" className="btn primary" onClick={()=>remove(pendingDelete)}>Eliminar registro</button></>}>
