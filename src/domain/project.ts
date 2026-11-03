@@ -373,6 +373,22 @@ export interface NormativeRule {
   reference?: string | null
 }
 
+export interface SubstitutionAbsence {
+  id:string
+  date:string
+  teacherId:string
+  sessionIds:string[]
+  notes:string
+  createdAt:string
+}
+
+export interface SubstitutionReassignment {
+  previousTeacherId:string
+  newTeacherId:string
+  changedAt:string
+  reason:string
+}
+
 export interface SubstitutionRecord {
   id: string
   date: string
@@ -382,7 +398,8 @@ export interface SubstitutionRecord {
   assignmentId: string
   substituteTeacherId: string
   coverageType: 'substitute' | 'co_teacher'
-  status: 'planned' | 'completed'
+  status: 'planned' | 'completed' | 'needs_reassignment'
+  reassignmentHistory?: SubstitutionReassignment[]
   notes: string
   createdAt: string
   completedAt?: string | null
@@ -434,6 +451,7 @@ export interface ViyeuticaProject {
   normativeRules: NormativeRule[]
   temporaryChanges: TemporaryScheduleChange[]
   substitutionRecords: SubstitutionRecord[]
+  substitutionAbsences: SubstitutionAbsence[]
   /** Legacy import compatibility only. Not used by the application. */
   collaboration?: unknown
   updatedAt: string | null
@@ -500,6 +518,7 @@ export const EMPTY_PROJECT: ViyeuticaProject = {
   normativeRules: [],
   temporaryChanges:[],
   substitutionRecords:[],
+  substitutionAbsences:[],
   updatedAt: null,
 }
 
