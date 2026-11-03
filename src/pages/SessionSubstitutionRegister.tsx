@@ -254,10 +254,24 @@ export function SessionSubstitutionRegister({
   }
 
   return <>
+    {(unresolved.length>0||historicalConflicts.length>0)&&<section className="panel substitution-conflict-panel">
+      <div className="groups-table-heading"><div><span className="panel-kicker">Incidencias de cobertura</span>
+        <h2><AlertTriangle size={17}/> {unresolved.length} pendientes de reasignación</h2>
+        <p>Las coberturas asignadas a docentes ausentes no se consideran atendidas hasta su corrección.</p>
+      </div></div>
+      {unresolved.map(record=><div key={record.id} className="substitution-conflict-row">
+        <span>{record.date} · {blocks.find(b=>b.id===record.sessionId)?.label??record.sessionId} · {byGroup(project,record.groupId)}</span>
+        <strong>{byName(project,record.absentTeacherId)} → {byName(project,record.substituteTeacherId)} (ausente)</strong>
+        <button type="button" className="btn primary" onClick={()=>beginReassignment(record.id)}>Reasignar</button>
+      </div>)}
+      {historicalConflicts.map(record=><p className="substitution-warning-note" key={record.id}>
+        Revisar histórico: {record.date} · {byName(project,record.substituteTeacherId)} figura ausente en una sustitución ya confirmada. No se modifica automáticamente.
+      </p>)}
+    </section>}
     <details className="panel substitution-register-section" open>
       <summary className="groups-table-heading substitution-section-summary">
         <div><span className="panel-kicker">Reparto</span><h2>Sustituciones por docente</h2><p>Solo las coberturas confirmadas se suman al contador de realizadas.</p></div>
-        <div className="substitution-summary-actions"><div className="substitution-counter-summary"><span>{completed} realizadas</span><span>{planned} previstas</span></div><ChevronDown size={18} className="substitution-section-chevron" aria-hidden="true"/></div>
+        <div className="substitution-summary-actions"><div className="substitution-counter-summary"><span>{completed} realizadas</span><span>{planned} previstas</span><span>{pending} pendientes</span></div><ChevronDown size={18} className="substitution-section-chevron" aria-hidden="true"/></div>
       </summary>
       <div className="list-filter-tags" aria-label="Filtrar reparto por docente">
         <button type="button" className={!countFilter?'active':''} onClick={()=>setCountFilter('')}>Todos</button>
@@ -289,11 +303,19 @@ export function SessionSubstitutionRegister({
         <td>{record.date}</td>
         <td>{project.schedule.blocks.find(b=>b.id===record.sessionId)?.label??record.sessionId}</td>
         <td>{byName(project,record.absentTeacherId)}</td>
-        <td>{byName(project,record.substituteTeacherId)}{record.coverageType==='co_teacher'?' · Codocente':''}</td>
+        <td>{byName(project,record.substituteTeacherId)}{record.coverageType==='co_teacher'?' · Codocente':''}
+          {Boolean(record.reassignmentHistory?.length)&&<details className="substitution-history-changes"><summary>Ver reasignaciones ({record.reassignmentHistory?.length})</summary>
+            {record.reassignmentHistory?.map((item,index)=><p key={index}>{byName(project,item.previousTeacherId)} → {byName(project,item.newTeacherId)}
+              <small> · {item.changedAt.slice(0,16)} · {item.reason}</small></p>)}
+          </details>}</td>
         <td>{byGroup(project,record.groupId)}</td>
-        <td>{record.status==='completed'?'Realizada':'Prevista'}</td>
+        <td><span className={'substitution-coverage-status '+coverageState(project,record)}>
+          {coverageState(project,record)==='needs_reassignment'?'Pendiente de reasignación'
+            :coverageState(project,record)==='review_completed'?'Revisar histórico'
+            :coverageState(project,record)==='completed'?'Realizada':'Prevista'}</span></td>
         <td><div className="substitution-history-actions">
-          {record.status==='planned'&&<button type="button" className="btn ghost-inline" onClick={()=>confirm(record)} title="Confirmar realización"><CheckCircle2 size={15}/> Confirmar</button>}
+          {coverageState(project,record)==='needs_reassignment'&&<button type="button" className="btn ghost-inline" onClick={()=>beginReassignment(record.id)}>Reasignar</button>}
+          {coverageState(project,record)==='planned'&&<button type="button" className="btn ghost-inline" onClick={()=>confirm(record)} title="Confirmar realización"><CheckCircle2 size={15}/> Confirmar</button>}
           <button type="button" className="row-delete" onClick={()=>setPendingDelete(record.id)} title="Eliminar registro"><Trash2 size={15}/></button>
         </div></td>
       </tr>)}</tbody></table>
@@ -303,6 +325,7 @@ export function SessionSubstitutionRegister({
 
     {editing&&<AppModal title="Registrar ausencia y coberturas" icon={<CalendarDays size={19}/>} onClose={closeEditor} wide footer={<>
       <button type="button" className="btn ghost-inline" onClick={closeEditor}>Cancelar</button>
+      <button type="button" className="btn ghost-inline" disabled={!activeDay||!absentTeacherId||!absenceSessionIds.length} onClick={registerAbsence}>Registrar ausencia sin cobertura</button>
       <button type="button" className="btn primary" disabled={!ready} onClick={save}>Guardar coberturas previstas</button>
     </>}>
       <div className="form-grid two">
@@ -312,6 +335,19 @@ export function SessionSubstitutionRegister({
         </select></label>
       </div>
       {!activeDay&&<p className="inline-error">La fecha seleccionada no es un día lectivo configurado.</p>}
+      {absentTeacherId&&activeDay&&<section className="substitution-absence-scope">
+        <div className="substitution-absence-heading"><strong>Sesiones afectadas por la ausencia</strong>
+          <button type="button" className="btn ghost-inline" onClick={()=>setAbsenceSessionIds(blocks.filter(b=>b.type==='teaching').map(b=>b.id))}>Todas las sesiones</button>
+        </div>
+        <div className="substitution-absence-sessions">{blocks.filter(b=>b.type==='teaching').map(block=><label key={block.id}>
+          <input type="checkbox" checked={absenceSessionIds.includes(block.id)} onChange={e=>setAbsenceSessionIds(previous=>
+            e.target.checked?[...new Set([...previous,block.id])]:previous.filter(id=>id!==block.id))}/>
+          {block.label} · {block.start}–{block.end}
+        </label>)}</div>
+        {affected.length>0&&<p className="substitution-warning-note"><AlertTriangle size={15}/> {affected.length} {affected.length===1?'cobertura asignada':'coberturas asignadas'} a este docente requieren revisión.</p>}
+        <p className="substitutions-help">Puedes registrar la ausencia sin asignar nuevas coberturas. Las sustituciones que ya tenía este docente quedarán pendientes de reasignación.</p>
+      </section>}
+
       {activeDay&&initialSessionId&&<p className="substitutions-help">Se muestran los docentes con clase en la sesión seleccionada. Puedes elegir más sesiones del mismo docente para cubrir la jornada completa.</p>}
       {absentTeacherId&&activeDay&&<div className="groups-table-wrap">
         <p className="substitution-form-description"><strong>{day&&dayName[day]}:</strong> marca una o varias sesiones. Pulsa el icono de docentes para elegir el responsable de cada cobertura.</p>
