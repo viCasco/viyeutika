@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { toBlob } from 'html-to-image'
 import { CalendarDays, Check, ClipboardCopy, Eye, Users } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
+import { coverageState } from '../domain/substitutionCoverage'
 import type { SubstitutionRecord, ViyeuticaProject, Weekday } from '../domain/project'
 
 const days:Record<Weekday,string>={L:'Lunes',M:'Martes',X:'Miércoles',J:'Jueves',V:'Viernes',S:'Sábado'}
@@ -90,8 +91,10 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
   const sessions=project.schedule.blocks.filter(block=>block.active&&block.type==='teaching')
     .sort((a,b)=>a.start.localeCompare(b.start))
   const records=substitutionsForDay(project,date)
-  const planned=records.filter(record=>record.status==='planned').length
+  const planned=records.filter(record=>coverageState(project,record)==='planned').length
   const completed=records.filter(record=>record.status==='completed').length
+  const pending=records.filter(record=>coverageState(project,record)==='needs_reassignment').length
+  const review=records.filter(record=>coverageState(project,record)==='review_completed').length
   const title=days[day]+' · '+new Intl.DateTimeFormat('es-ES',{day:'2-digit',month:'2-digit',year:'numeric',timeZone:'UTC'})
     .format(new Date(date+'T12:00:00Z'))
 
@@ -106,7 +109,7 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
   const renderReport=()=> <>
       <div className="daily-substitutions-intro">
         <div><strong>⩒Yeutika · Cuadrante diario de sustituciones</strong><p><CalendarDays size={14}/>{title}</p></div>
-        <span>{records.length} {records.length===1?'cobertura':'coberturas'} · {planned} previstas · {completed} realizadas</span>
+        <span>{records.length} {records.length===1?'cobertura':'coberturas'} · {planned} previstas · {completed} realizadas{pending>0?' · '+pending+' sin cobertura':''}{review>0?' · '+review+' a revisar':''}</span>
       </div>
       <div className="daily-substitutions-grid">
         {sessions.map(session=>{
@@ -119,16 +122,20 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
             {matching.length?<div className="daily-substitutions-items">
               {matching.map(record=>{
                 const place=locationFor(record)
-                return <article className="daily-substitutions-item" key={record.id}>
+                const state=coverageState(project,record)
+                return <article className={'daily-substitutions-item '+(state==='needs_reassignment'?'has-conflict':'')} key={record.id}>
                   <div className="daily-substitutions-names">
-                    <div><span>Sustituye</span><strong>{teacherName(project,record.substituteTeacherId)}</strong></div>
+                    <div><span>{state==='needs_reassignment'?'Asignación anterior':'Sustituye'}</span>
+                      <strong>{teacherName(project,record.substituteTeacherId)}</strong></div>
                     <div><span>Docente ausente</span><strong>{teacherName(project,record.absentTeacherId)}</strong></div>
                   </div>
                   <p><Users size={13}/> <strong>{place.group}</strong> · {place.subject}</p>
                   <p><strong>Aula:</strong> {place.room}</p>
                   {record.coverageType==='co_teacher'&&<p>Permanece el codocente del grupo.</p>}
                   {record.notes&&<p><strong>Observaciones:</strong> {record.notes}</p>}
-                  <span className={'daily-substitutions-status '+record.status}>{record.status==='completed'?'Realizada':'Prevista'}</span>
+                  {state==='needs_reassignment'&&<p className="daily-substitutions-alert">SIN COBERTURA · Pendiente de reasignación. El responsable anterior está ausente.</p>}
+                  {state==='review_completed'&&<p className="daily-substitutions-alert">REVISAR HISTÓRICO · Consta una ausencia del responsable de esta cobertura ya confirmada.</p>}
+                  <span className={'daily-substitutions-status '+record.status}>{state==='needs_reassignment'?'Pendiente de reasignación':state==='review_completed'?'Revisar histórico':record.status==='completed'?'Realizada':'Prevista'}</span>
                 </article>
               })}
             </div>:<p className="daily-substitutions-no-cover">No se han registrado coberturas para esta sesión.</p>}
