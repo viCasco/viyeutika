@@ -3360,7 +3360,7 @@ button.btn:disabled:hover{
 .daily-substitutions-session-header span{font-size:10px;color:var(--muted)}
 .daily-substitutions-session-header small{margin-left:auto;font-size:9px;color:var(--navy2);font-weight:800}
 .daily-substitutions-items{padding:9px;display:flex;flex-direction:column;gap:9px}
-.daily-substitutions-item{border:1px solid var(--border);border-radius:8px;padding:10px;overflow-wrap:anywhere}
+.daily-substitutions-item{border:0;border-radius:0;padding:0;background:transparent;overflow-wrap:anywhere}
 .daily-substitutions-names{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:8px}
 .daily-substitutions-names span,.daily-substitutions-names strong{display:block}
 .daily-substitutions-names span{font-size:9px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:750}
@@ -3398,3 +3398,14 @@ button.btn:disabled:hover{
 
 /* Full-height modal clone for exported substitutions; keep its existing header and spacing. */
 .daily-substitutions-capture{min-width:0}
+
+/* A single session container, without nested boxes; white capture except session headers */
+.daily-substitutions-capture,
+.daily-substitutions-intro,
+.daily-substitutions-grid,
+.daily-substitutions-session,
+.daily-substitutions-no-cover{background:#ffffff}
+.daily-substitutions-session-header{background:#eff3f8}
+.daily-substitutions-items{padding:12px 14px;gap:14px}
+.daily-substitutions-item{border:0;border-radius:0;padding:0;background:transparent;box-shadow:none}
+.daily-substitutions-item+.daily-substitutions-item{padding-top:12px;border-top:1px solid var(--border)}

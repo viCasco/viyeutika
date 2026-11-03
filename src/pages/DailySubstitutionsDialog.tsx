@@ -31,7 +31,8 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
   const [copyError,setCopyError]=useState('')
   const copyCapture=async()=>{
     const modal=captureRef.current?.closest<HTMLElement>('.app-modal')
-    if(!modal)return
+    const body=modal?.querySelector<HTMLElement>('.app-modal-body')
+    if(!modal||!body)return
     if(!window.isSecureContext||!navigator.clipboard?.write||typeof ClipboardItem==='undefined'){
       setCopyStatus('error')
       setCopyError('Este navegador no permite copiar imágenes. Abre la web mediante HTTPS y utiliza un navegador compatible.')
@@ -39,32 +40,47 @@ export function DailySubstitutionsDialog({project,day,date,onClose}:{
     }
     setCopyStatus('copying')
     setCopyError('')
-    try {
-      // ClipboardItem recibe la promesa antes de perder la activación del clic.
-      const image=toBlob(modal,{
-        backgroundColor:'#eef1f6',
-        pixelRatio:2,
-        cacheBust:true,
-        filter:node=>{
-          if(!(node instanceof Element))return true
-          return ![
-            'modal-close','app-modal-footer','daily-substitutions-status',
-            'daily-substitutions-footer',
-          ].some(name=>node.classList.contains(name))
-        },
-        style:{
-          width:'1200px',
-          height:'auto',
-          maxHeight:'none',
-          overflow:'visible',
-          boxShadow:'none',
-          borderRadius:'22px',
-        },
-      }).then(blob=>{
+    // Temporarily expand the actual scroll container, not an offscreen clone.
+    // html-to-image otherwise only captures the visible part of .app-modal-body.
+    const oldModalStyle=modal.getAttribute('style')
+    const oldBodyStyle=body.getAttribute('style')
+    const restore=()=>{
+      if(oldModalStyle===null)modal.removeAttribute('style')
+      else modal.setAttribute('style',oldModalStyle)
+      if(oldBodyStyle===null)body.removeAttribute('style')
+      else body.setAttribute('style',oldBodyStyle)
+    }
+    const createImage=async()=>{
+      try{
+        Object.assign(modal.style,{
+          width:'1200px',maxWidth:'none',maxHeight:'none',height:'auto',
+          overflow:'visible',boxShadow:'none',borderRadius:'18px',backgroundColor:'#ffffff',
+        })
+        Object.assign(body.style,{
+          maxHeight:'none',height:'auto',overflow:'visible',backgroundColor:'#ffffff',
+        })
+        // Force layout before rasterization so every session is in the DOM image.
+        void body.scrollHeight
+        const blob=await toBlob(modal,{
+          backgroundColor:'#ffffff',
+          pixelRatio:2,
+          cacheBust:true,
+          filter:node=>{
+            if(!(node instanceof Element))return true
+            return !['modal-close','app-modal-footer','daily-substitutions-status','daily-substitutions-footer']
+              .some(name=>node.classList.contains(name))
+          },
+          style:{maxHeight:'none',height:'auto',overflow:'visible',backgroundColor:'#ffffff'},
+        })
         if(!blob||blob.size<2000)throw new Error('No se pudo generar una captura válida.')
         return blob
-      })
-      await navigator.clipboard.write([new ClipboardItem({'image/png':image})])
+      }finally{
+        restore()
+      }
+    }
+    try{
+      // Pass a promise to ClipboardItem immediately, preserving click activation.
+      await navigator.clipboard.write([new ClipboardItem({'image/png':createImage()})])
       setCopyStatus('success')
     }catch(error){
       setCopyStatus('error')
