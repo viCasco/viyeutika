@@ -177,7 +177,46 @@ export function SessionSubstitutionRegister({
   const choosingOptions=choosing?coverageOptions(project,date,choosing):[]
   const choiceMap=Object.fromEntries(choosingOptions.map(opt=>[opt.id.split(':')[1],opt.id]))
   const pickerCandidates=choosing?candidatesFor(choosing.day,choosing.sessionId):[]
+
   const selectedTeacherNames=project.teachers.filter(t=>t.active).sort((a,b)=>a.name.localeCompare(b.name,'es'))
+  const reassigning=records.find(record=>record.id===reassignmentId)
+  const replacementDay=reassigning?dateDay(reassigning.date):null
+  const replacementOptions:EntryOption[]=reassigning?project.teachers.filter(t=>t.active).flatMap(t=>{
+    const options:EntryOption[]=[]
+    if(eligibleReplacement(project,reassigning,t.id,'co_teacher'))
+      options.push({id:'co:'+t.id,label:'Codocente existente: '+t.name,kind:'co_teacher'})
+    if(eligibleReplacement(project,reassigning,t.id,'substitute'))
+      options.push({id:'sub:'+t.id,label:t.name,kind:'substitute'})
+    return options
+  }):[]
+  const replacementMap=Object.fromEntries(replacementOptions.map(option=>[option.id.slice(3),option.id]))
+  const replacementCandidates=reassigning&&replacementDay?candidatesFor(replacementDay,reassigning.sessionId):[]
+  const beginReassignment=(recordId:string)=>{
+    setReassignmentId(recordId);setReplacementChoice('');setReassignmentReason('Ausencia sobrevenida');setError('')
+  }
+  const saveReassignment=()=>{
+    if(!reassigning||!replacementOptions.some(option=>option.id===replacementChoice)){
+      setError('Selecciona un sustituto disponible para esta sesión.');return
+    }
+    try {
+      const kind=replacementChoice.startsWith('co:')?'co_teacher':'substitute'
+      saveProject(reassignSubstitution(project,reassigning.id,replacementChoice.slice(3),kind,reassignmentReason,new Date().toISOString()),{intent:'replace_project'})
+      setReassignmentId(null);setReplacementChoice('');setError('')
+    }catch(e){setError(e instanceof Error?e.message:'No se puede reasignar la cobertura.')}
+  }
+  const registerAbsence=()=>{
+    if(!absentTeacherId||!activeDay||!absenceSessionIds.length){
+      setError('Selecciona docente y al menos una sesión de ausencia.');return
+    }
+    try{
+      const next=registerTeacherAbsence(project,{
+        id:'absence_'+crypto.randomUUID(),date,teacherId:absentTeacherId,
+        sessionIds:absenceSessionIds,notes:notes.trim(),createdAt:new Date().toISOString(),
+      })
+      saveProject(next,{intent:'replace_project'})
+      closeEditor();setAbsenceSessionIds([]);setNotes('')
+    }catch(e){setError(e instanceof Error?e.message:'No se pudo registrar la ausencia.')}
+  }
 
   const changeDate=(next:string)=>{
     setDate(next);setAbsentTeacherId('');setSelectedEntryIds([]);setAbsenceSessionIds(initialSessionId?[initialSessionId]:[]);setChoices({});setError('')
@@ -199,12 +238,16 @@ export function SessionSubstitutionRegister({
         assignmentId:entry.assignmentId,substituteTeacherId:opt.id.split(':')[1],
         coverageType:opt.kind,status:'planned',notes:notes.trim(),createdAt:new Date().toISOString(),completedAt:null}
     })
-    saveProject({...project,substitutionRecords:[...records,...additions]},{intent:'replace_project'})
+    const absentSessionIds=[...new Set(additions.map(record=>record.sessionId))]
+    const next=registerTeacherAbsence(project,{id:'absence_'+crypto.randomUUID(),date,teacherId:absentTeacherId,
+      sessionIds:absentSessionIds,notes:notes.trim(),createdAt:new Date().toISOString()})
+    saveProject({...next,substitutionRecords:[...next.substitutionRecords,...additions]},{intent:'replace_project'})
     closeEditor();setAbsentTeacherId('');setSelectedEntryIds([]);setChoices({});setNotes('')
   }
-  const confirm=(record:SubstitutionRecord)=>saveProject({...project,substitutionRecords:records.map(item=>
-    item.id===record.id?{...item,status:'completed' as const,completedAt:new Date().toISOString()}:item
-  )},{intent:'replace_project'})
+  const confirm=(record:SubstitutionRecord)=>{
+    try{saveProject(confirmSubstitution(project,record.id,new Date().toISOString()),{intent:'replace_project'})}
+    catch(e){setError(e instanceof Error?e.message:'No se puede confirmar.')}
+  }
   const remove=(recordId:string)=>{
     saveProject({...project,substitutionRecords:records.filter(item=>item.id!==recordId)},{intent:'replace_project'})
     setPendingDelete(null)
