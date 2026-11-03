@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarDays, CheckCircle2, ChevronDown, ClipboardList, UserRoundPlus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCircle2, ChevronDown, ClipboardList, UserRoundPlus, Trash2 } from 'lucide-react'
 import { AppModal } from '../components/AppModal'
 import { saveProject } from '../store/projectStorage'
 import type { GeneratedScheduleEntry, SubstitutionRecord, ViyeuticaProject, Weekday } from '../domain/project'
 import { teacherIsUnavailable } from '../domain/validationEngine'
+import { affectedSubstitutions, confirmSubstitution, coverageState, eligibleReplacement, isTeacherAbsent, reassignSubstitution, registerTeacherAbsence } from '../domain/substitutionCoverage'
 import { SortableTh, sortCollection, type SortState } from '../components/DataCollectionView'
 import { SubstitutionTeacherDialog, type CandidateDetail } from './SubstitutionTeacherDialog'
 
@@ -16,6 +17,10 @@ const dateDay=(date:string):Weekday|null=>{
 }
 const id=()=> 'sub_'+crypto.randomUUID()
 
+function recordsForDate(project:ViyeuticaProject,date:string){
+  return (project.substitutionRecords??[]).filter(record=>record.date===date)
+}
+
 type EntryOption={id:string;label:string;kind:'substitute'|'co_teacher'}
 
 export function isSubstituteEligible(
@@ -23,22 +28,23 @@ export function isSubstituteEligible(
   date:string,
   entry:GeneratedScheduleEntry,
   teacherId:string,
+  excludeRecordId?:string,
 ):boolean {
   const day=dateDay(date)
   if(!day||day!==entry.day||teacherId===entry.teacherId)return false
   const teacher=project.teachers.find(item=>item.id===teacherId&&item.active)
   const run=project.establishedScheduleRun
   if(!teacher||!run)return false
-  if(teacherIsUnavailable(project,teacherId,{day,sessionId:entry.sessionId}))return false
+  if(teacherIsUnavailable(project,teacherId,{day,sessionId:entry.sessionId})||isTeacherAbsent(project,teacherId,date,entry.sessionId))return false
   if(run.entries.some(other=>other.teacherId===teacherId&&other.day===day&&other.sessionId===entry.sessionId))return false
-  if((project.substitutionRecords??[]).some(record=>record.date===date&&record.sessionId===entry.sessionId
-    &&record.substituteTeacherId===teacherId))return false
+  if((project.substitutionRecords??[]).some(record=>record.id!==excludeRecordId&&record.date===date&&record.sessionId===entry.sessionId
+    &&record.substituteTeacherId===teacherId&&coverageState(project,record)!=='needs_reassignment'))return false
   if(project.temporaryChanges.some(change=>change.active&&change.kind==='absence'
     &&change.teacherId===teacherId&&date>=change.startDate&&date<=change.endDate))return false
   return true
 }
 
-export function coverageOptions(project:ViyeuticaProject,date:string,entry:GeneratedScheduleEntry):EntryOption[]{
+export function coverageOptions(project:ViyeuticaProject,date:string,entry:GeneratedScheduleEntry,excludeRecordId?:string):EntryOption[]{
   const run=project.establishedScheduleRun
   if(!run)return []
   const codocents=run.entries.filter(other=>
@@ -48,9 +54,10 @@ export function coverageOptions(project:ViyeuticaProject,date:string,entry:Gener
   )
   const retained=codocents
     .filter(item=>project.teachers.some(t=>t.id===item.teacherId&&t.active)
-      &&!teacherIsUnavailable(project,item.teacherId,{day:entry.day,sessionId:entry.sessionId}))
+      &&!teacherIsUnavailable(project,item.teacherId,{day:entry.day,sessionId:entry.sessionId})
+      &&!isTeacherAbsent(project,item.teacherId,date,entry.sessionId))
     .map(item=>({id:'co:'+item.teacherId,label:'Codocente existente: '+(project.teachers.find(t=>t.id===item.teacherId)?.name??item.teacherId),kind:'co_teacher' as const}))
-  const substitutes=project.teachers.filter(t=>isSubstituteEligible(project,date,entry,t.id))
+  const substitutes=project.teachers.filter(t=>isSubstituteEligible(project,date,entry,t.id,excludeRecordId))
     .map(t=>({id:'sub:'+t.id,label:t.name,kind:'substitute' as const}))
   return [...retained,...substitutes]
 }
@@ -101,6 +108,11 @@ export function SessionSubstitutionRegister({
   const [pendingDelete,setPendingDelete]=useState<string|null>(null)
   const [historyFilter,setHistoryFilter]=useState('')
   const [historyDate,setHistoryDate]=useState('')
+  const [absenceSessionIds,setAbsenceSessionIds]=useState<string[]>([])
+  const [reassignmentId,setReassignmentId]=useState<string|null>(null)
+  const [replacementChoice,setReplacementChoice]=useState('')
+  const [reassignmentReason,setReassignmentReason]=useState('Ausencia sobrevenida')
+  const [replacementPicker,setReplacementPicker]=useState(false)
   const [countFilter,setCountFilter]=useState('')
   const [countSort,setCountSort]=useState<SortState<'name'|'completed'|'planned'>>({key:'completed',direction:'asc'})
 
@@ -112,6 +124,7 @@ export function SessionSubstitutionRegister({
     setSelectedEntryIds([])
     setChoices({})
     setNotes('')
+    setAbsenceSessionIds([slotRequest.sessionId])
     setError('')
     setChoosingEntryId(null)
     setEditing(true)
@@ -126,9 +139,11 @@ export function SessionSubstitutionRegister({
     :[],[run,day,activeDay])
   const teachersInSession=useMemo(()=>{
     const entries=initialSessionId?dayEntries.filter(entry=>entry.sessionId===initialSessionId):dayEntries
-    return project.teachers.filter(t=>t.active&&entries.some(entry=>entry.teacherId===t.id))
+    return project.teachers.filter(t=>t.active&&(entries.some(entry=>entry.teacherId===t.id)
+      ||recordsForDate(project,date).some(record=>record.substituteTeacherId===t.id
+        &&(!initialSessionId||record.sessionId===initialSessionId))))
       .sort((a,b)=>a.name.localeCompare(b.name,'es'))
-  },[project.teachers,dayEntries,initialSessionId])
+  },[project,dayEntries,date,initialSessionId])
   const lessonEntries=useMemo(()=>dayEntries.filter(entry=>entry.teacherId===absentTeacherId)
     .sort((a,b)=>blocks.findIndex(block=>block.id===a.sessionId)-blocks.findIndex(block=>block.id===b.sessionId)),
     [dayEntries,absentTeacherId,blocks])
@@ -143,11 +158,15 @@ export function SessionSubstitutionRegister({
     &&new Set(selected.map(entry=>entry.sessionId+'|'+choices[entry.id])).size===selected.length
 
   const completed=records.filter(r=>r.status==='completed').length
-  const planned=records.filter(r=>r.status==='planned').length
+  const planned=records.filter(r=>coverageState(project,r)==='planned').length
+  const pending=records.filter(r=>coverageState(project,r)==='needs_reassignment').length
+  const historicalConflicts=records.filter(r=>coverageState(project,r)==='review_completed')
+  const unresolved=records.filter(r=>coverageState(project,r)==='needs_reassignment')
+  const affected=absentTeacherId?affectedSubstitutions(project,absentTeacherId,date,absenceSessionIds):[]
   const counts=project.teachers.filter(t=>t.active||records.some(r=>r.substituteTeacherId===t.id)).map(teacher=>({
     id:teacher.id,name:teacher.name,
     completed:records.filter(r=>r.substituteTeacherId===teacher.id&&r.status==='completed').length,
-    planned:records.filter(r=>r.substituteTeacherId===teacher.id&&r.status==='planned').length,
+    planned:records.filter(r=>r.substituteTeacherId===teacher.id&&coverageState(project,r)==='planned').length,
   }))
   const sortedCounts=sortCollection(counts.filter(t=>!countFilter||t.id===countFilter),countSort,(row,key)=>row[key])
   const history=records.filter(record=>
@@ -161,10 +180,11 @@ export function SessionSubstitutionRegister({
   const selectedTeacherNames=project.teachers.filter(t=>t.active).sort((a,b)=>a.name.localeCompare(b.name,'es'))
 
   const changeDate=(next:string)=>{
-    setDate(next);setAbsentTeacherId('');setSelectedEntryIds([]);setChoices({});setError('')
+    setDate(next);setAbsentTeacherId('');setSelectedEntryIds([]);setAbsenceSessionIds(initialSessionId?[initialSessionId]:[]);setChoices({});setError('')
   }
   const changeAbsent=(teacherId:string)=>{
     setAbsentTeacherId(teacherId)
+    setAbsenceSessionIds(initialSessionId?[initialSessionId]:[])
     const entries=dayEntries.filter(e=>e.teacherId===teacherId&&(!initialSessionId||e.sessionId===initialSessionId))
     setSelectedEntryIds(entries.length?entries.map(e=>e.id):[])
     setChoices({})
