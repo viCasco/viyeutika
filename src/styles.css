@@ -3409,3 +3409,28 @@ button.btn:disabled:hover{
 .daily-substitutions-items{padding:12px 14px;gap:14px}
 .daily-substitutions-item{border:0;border-radius:0;padding:0;background:transparent;box-shadow:none}
 .daily-substitutions-item+.daily-substitutions-item{padding-top:12px;border-top:1px solid var(--border)}
+
+
+/* Session substitutions: cascading absences and audited reassignment */
+.substitution-conflict-panel{border:1px solid #eab76d;margin-top:12px}
+.substitution-conflict-panel h2{display:flex;align-items:center;gap:8px}
+.substitution-conflict-panel h2 svg{color:#ab6c11}
+.substitution-conflict-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--border);font-size:11px}
+.substitution-conflict-row span{color:var(--muted)}
+.substitution-conflict-row strong{flex:1;min-width:180px}
+.substitution-warning-note{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#fff5df;border:1px solid #f0cf87;color:#83560f;border-radius:8px;font-size:11px;line-height:1.5}
+.substitution-absence-scope{margin:14px 0;padding:12px 14px;border:1px solid var(--border);border-radius:10px}
+.substitution-absence-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.substitution-absence-heading strong{font-size:12px}
+.substitution-absence-sessions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.substitution-absence-sessions label{display:inline-flex;gap:6px;align-items:center;padding:7px 9px;border:1px solid var(--border);border-radius:8px;font-size:11px}
+.substitution-coverage-status{font-size:10px;font-weight:800;white-space:normal}
+.substitution-coverage-status.needs_reassignment,.substitution-coverage-status.review_completed{color:#a35410}
+.substitution-coverage-status.completed{color:#256a25}
+.substitution-history-changes{font-size:10px;margin-top:6px}
+.substitution-history-changes summary{cursor:pointer;color:var(--navy2);font-weight:800}
+.substitution-history-changes p{margin:6px 0;color:var(--muted)}
+.daily-substitutions-alert{font-size:10px!important;font-weight:800;color:#a35410!important;margin:8px 0!important;line-height:1.5}
+.daily-substitutions-item.has-conflict{border-left:3px solid #d18628;padding-left:9px}
+@media(max-width:780px){.substitution-conflict-row{align-items:stretch;flex-direction:column}.substitution-absence-heading{align-items:flex-start;flex-direction:column}}
+[data-theme="dark"] .substitution-warning-note{background:#342718;border-color:#765b32;color:#f4d196}
